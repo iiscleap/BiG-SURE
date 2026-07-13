@@ -1,0 +1,236 @@
+{
+  "question_id": "4496345",
+  "question_type": "Vehicles and Transportation",
+  "original_question": "What city was this picture taken in?",
+  "multiple_choice_answer": "moscow",
+  "answers_joined": "moscow; moscow; moscow; moscow; somewhere; somewhere; korea; korea; chicago; chicago",
+  "original_image": "OKVQA_val2014_000000000000_4496345.jpg",
+  "num_perturbations": 7,
+  "total_rephrasings": 35,
+  "perturbations": {
+    "contrast1": {
+      "perturbation_type": "contrast",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4496345_contrast1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "In which city was this photograph taken?",
+          "id": "4496345_contrast1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What urban area is depicted in this picture?",
+          "id": "4496345_contrast1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "Where was the location of this image photographed?",
+          "id": "4496345_contrast1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What municipality is featured in this photograph?",
+          "id": "4496345_contrast1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What metropolis is the subject of this image?",
+          "id": "4496345_contrast1_rephrased5"
+        }
+      ]
+    },
+    "blur1": {
+      "perturbation_type": "blur",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4496345_blur1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "In which city was this photograph taken?",
+          "id": "4496345_blur1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What metropolitan area is featured in this picture?",
+          "id": "4496345_blur1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "Which urban center is the location of this image?",
+          "id": "4496345_blur1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "Where in the world was this picture captured in a city setting?",
+          "id": "4496345_blur1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What city serves as the backdrop for this photograph?",
+          "id": "4496345_blur1_rephrased5"
+        }
+      ]
+    },
+    "rotate1": {
+      "perturbation_type": "rotate",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4496345_rotate1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "In which city was this photograph taken?",
+          "id": "4496345_rotate1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What metropolitan area is the location of this picture?",
+          "id": "4496345_rotate1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What urban center is the setting of this photograph?",
+          "id": "4496345_rotate1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "Where exactly was this picture captured in terms of a city?",
+          "id": "4496345_rotate1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "In which municipal area is this picture situated?",
+          "id": "4496345_rotate1_rephrased5"
+        }
+      ]
+    },
+    "shift1": {
+      "perturbation_type": "shift",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4496345_shift1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "In which city was the photograph taken?",
+          "id": "4496345_shift1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "Where was the picture originally taken?",
+          "id": "4496345_shift1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What urban location is the photo from?",
+          "id": "4496345_shift1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "In which metropolitan area was the picture captured?",
+          "id": "4496345_shift1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What municipality is the location of the photograph?",
+          "id": "4496345_shift1_rephrased5"
+        }
+      ]
+    },
+    "noise1": {
+      "perturbation_type": "noise",
+      "perturbation_intensity": "5.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4496345_noise1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "In what city was this photograph taken?",
+          "id": "4496345_noise1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "Which city is the location of this picture?",
+          "id": "4496345_noise1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What is the name of the city in which this image was captured?",
+          "id": "4496345_noise1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "Can you tell me the name of the city where this photo was taken?",
+          "id": "4496345_noise1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What urban area is depicted in this image?",
+          "id": "4496345_noise1_rephrased5"
+        }
+      ]
+    },
+    "masking1": {
+      "perturbation_type": "masking",
+      "perturbation_intensity": "5.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4496345_masking1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "In what city was this photograph taken?",
+          "id": "4496345_masking1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What municipality is the location of this picture?",
+          "id": "4496345_masking1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "Where was the scene in this picture captured?",
+          "id": "4496345_masking1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What urban center is depicted in this image?",
+          "id": "4496345_masking1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "In which metropolitan area was this picture snapped?",
+          "id": "4496345_masking1_rephrased5"
+        }
+      ]
+    },
+    "bw1": {
+      "perturbation_type": "bw",
+      "perturbation_intensity": "",
+      "perturbed_image": "OKVQA_val2014_000000000000_4496345_bw1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "In what metropolitan area was this photograph captured?",
+          "id": "4496345_bw1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What urban center is depicted in this image?",
+          "id": "4496345_bw1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "Which city is the backdrop for this picture?",
+          "id": "4496345_bw1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "In which city was this photograph taken?",
+          "id": "4496345_bw1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What municipality is featured in this image?",
+          "id": "4496345_bw1_rephrased5"
+        }
+      ]
+    }
+  }
+}

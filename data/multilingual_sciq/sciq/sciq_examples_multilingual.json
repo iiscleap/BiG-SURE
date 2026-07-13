@@ -1,0 +1,230 @@
+{
+  "en": [
+    {
+      "original_question": "Name two differences between a larval staged frog and an adult frog.",
+      "rephrased_questions": [
+        "What are two differences between a larval staged frog and an adult frog?",
+        "List two differences separating a larval staged frog from an adult frog.",
+        "Identify two differences found between an adult frog and a larval staged frog.",
+        "State two differences concerning a larval staged frog and an adult frog.",
+        "Provide two differences existing between a larval staged frog and an adult frog."
+      ],
+      "answer": "tadpoles lack legs and have gills"
+    },
+    {
+      "original_question": "What  is the process by which the nucleus of a eukaryotic cell divides?",
+      "rephrased_questions": [
+        "What  is the process by which the nucleus of a eukaryotic cell divides?",
+        "What  is the process by which the nucleus of a eukaryotic cell divides?",
+        "What  is the process by which the nucleus of a eukaryotic cell divides?",
+        "What  is the process by which the nucleus of a eukaryotic cell divides?",
+        "What  is the process by which the nucleus of a eukaryotic cell divides?"
+      ],
+      "answer": "mitosis"
+    },
+    {
+      "original_question": "What kind of decay is electron capture a type of?",
+      "rephrased_questions": [
+        "Electron capture is a type of what kind of decay?",
+        "Which kind of decay is electron capture a type of?",
+        "Of what kind of decay is electron capture a type?",
+        "What type of decay is electron capture a kind of?",
+        "Electron capture is a type of decay of what kind?"
+      ],
+      "answer": "beta decay"
+    },
+    {
+      "original_question": "Which blood pressure is highest when the heart contracts during ventricular systole?",
+      "rephrased_questions": [
+        "When the heart contracts during ventricular systole, which blood pressure is highest?",
+        "During ventricular systole, as the heart contracts, what blood pressure is the highest?",
+        "Identify the blood pressure that is highest when the heart contracts during ventricular systole.",
+        "In the phase of ventricular systole, when the heart contracts, which blood pressure reaches its highest level?",
+        "What blood pressure is highest at the time the heart contracts during ventricular systole?"
+      ],
+      "answer": "arterial"
+    },
+    {
+      "original_question": "What type of organisms collect the energy from the sun and turn it into organic compounds?",
+      "rephrased_questions": [
+        "Which type of organisms collect energy from the sun and turn it into organic compounds?",
+        "Organisms that collect the energy from the sun and turn it into organic compounds, what type are they?",
+        "What kind of organisms turn the energy from the sun into organic compounds, having collected it?",
+        "Identify the type of organisms that collect energy from the sun and convert it into organic compounds.",
+        "What are the types of organisms that collect energy from the sun and transform it into organic compounds?"
+      ],
+      "answer": "autotrophs"
+    }
+  ],
+  "fr": [
+    {
+      "original_question": "Nommez deux différences entre une grenouille au stade larvaire et une grenouille adulte.",
+      "rephrased_questions": [
+        "Quelles sont les deux différences entre une grenouille au stade larvaire et une grenouille adulte ?",
+        "Citez deux différences entre une grenouille adulte et une grenouille au stade larvaire.",
+        "Indiquez deux différences existant entre une grenouille au stade larvaire et une grenouille adulte.",
+        "Énumérez deux différences qui distinguent une grenouille au stade larvaire d'une grenouille adulte.",
+        "Donnez deux différences concernant une grenouille au stade larvaire et une grenouille adulte."
+      ],
+      "answer": "les têtards n'ont pas de pattes et ont des branchies"
+    },
+    {
+      "original_question": "Quel est le processus par lequel le noyau d'une cellule eucaryote se divise ?",
+      "rephrased_questions": [
+        "Quel est le processus par lequel le noyau d'une cellule eucaryote se divise ?",
+        "Quel est le processus par lequel le noyau d'une cellule eucaryote se divise ?",
+        "Quel est le processus par lequel le noyau d'une cellule eucaryote se divise ?",
+        "Quel est le processus par lequel le noyau d'une cellule eucaryote se divise ?",
+        "Quel est le processus par lequel le noyau d'une cellule eucaryote se divise ?"
+      ],
+      "answer": "mitose"
+    },
+    {
+      "original_question": "De quel type de désintégration la capture électronique est-elle un type?",
+      "rephrased_questions": [
+        "De quel type de désintégration est la capture électronique un type?",
+        "La capture électronique est-elle un type de quel type de désintégration?",
+        "Quel type de désintégration est la capture électronique un type de?",
+        "La capture électronique est un type de désintégration de quel type?",
+        "Un type de désintégration, de quel type la capture électronique est-elle un type?"
+      ],
+      "answer": "désintégration bêta"
+    },
+    {
+      "original_question": "Quelle pression artérielle est la plus élevée lorsque le cœur se contracte pendant la systole ventriculaire ?",
+      "rephrased_questions": [
+        "Lorsque le cœur se contracte pendant la systole ventriculaire, quelle pression artérielle est la plus élevée ?",
+        "Quelle est la pression artérielle la plus élevée quand le cœur se contracte durant la systole ventriculaire ?",
+        "Pendant la systole ventriculaire, au moment où le cœur se contracte, quelle pression artérielle est la plus élevée ?",
+        "Parmi les pressions artérielles, laquelle est la plus élevée lorsque le cœur se contracte pendant la systole ventriculaire ?",
+        "Quand le cœur se contracte durant la systole ventriculaire, quelle pression artérielle atteint son point le plus élevé ?"
+      ],
+      "answer": "artériel"
+    },
+    {
+      "original_question": "Quel type d'organismes collecte l'énergie du soleil et la transforme en composés organiques ?",
+      "rephrased_questions": [
+        "Quel est le type d'organismes qui collecte l'énergie du soleil et la transforme en composés organiques ?",
+        "Les organismes qui collectent l'énergie du soleil et la transforment en composés organiques, de quel type sont-ils ?",
+        "De quel type sont les organismes qui collectent l'énergie du soleil et la convertissent en composés organiques ?",
+        "Les organismes qui recueillent l'énergie du soleil pour la transformer en composés organiques, quel est leur type ?",
+        "Quel genre d'organismes collecte l'énergie provenant du soleil et la change en composés organiques ?"
+      ],
+      "answer": "autotrophes"
+    }
+  ],
+  "ja": [
+    {
+      "original_question": "幼生期のカエルと成体のカエルの違いを二つ挙げてください。",
+      "rephrased_questions": [
+        "幼生期のカエルと成体のカエルには、どのような違いが二つありますか？",
+        "幼生期のカエルと成体のカエルの相違点を二つ述べてください。",
+        "成体のカエルと幼生期のカエルの違いを二つ教えてください。",
+        "幼生期のカエルと成体のカエルから二つの違いを挙げてください。",
+        "二つの違いを、幼生期のカエルと成体のカエルについて説明してください。"
+      ],
+      "answer": "オタマジャクシは足がなく、エラを持っています。"
+    },
+    {
+      "original_question": "真核細胞の核が分裂する過程は何ですか？",
+      "rephrased_questions": [
+        "真核細胞の核が分裂する過程は何ですか？",
+        "真核細胞の核が分裂する過程は何ですか？",
+        "真核細胞の核が分裂する過程は何ですか？",
+        "真核細胞の核が分裂する過程は何ですか？",
+        "真核細胞の核が分裂する過程は何ですか？"
+      ],
+      "answer": "有糸分裂"
+    },
+    {
+      "original_question": "電子捕獲はどのような崩壊の一種ですか？",
+      "rephrased_questions": [
+        "どのような崩壊の一種が電子捕獲ですか？",
+        "電子捕獲は崩壊のどのような一種ですか？",
+        "崩壊のどのような一種が、電子捕獲ですか？",
+        "電子捕獲は、どのような種類の崩壊ですか？",
+        "どのような種類の崩壊が、電子捕獲ですか？"
+      ],
+      "answer": "ベータ崩壊"
+    },
+    {
+      "original_question": "心室収縮期に心臓が収縮する際、どの血圧が最も高いですか？",
+      "rephrased_questions": [
+        "心臓が心室収縮期に収縮するとき、どの血圧が最も高いですか？",
+        "心室収縮期中に心臓が収縮する際、どの血圧が最も高いですか？",
+        "どの血圧が、心室収縮期に心臓が収縮する時に最も高まりますか？",
+        "心室収縮期において心臓が収縮する際、最も高い血圧はどれですか？",
+        "心臓が収縮する心室収縮期の間、どの血圧が最も高いですか？"
+      ],
+      "answer": "動脈の"
+    },
+    {
+      "original_question": "太陽からのエネルギーを集めて有機化合物に変える生物の種類は何ですか？",
+      "rephrased_questions": [
+        "太陽からのエネルギーを集めて有機化合物に変える生物の種類は何ですか？",
+        "有機化合物に、太陽からのエネルギーを集めて変える生物の種類は何ですか？",
+        "太陽からのエネルギーを集め、そして有機化合物に変える生物は、どのような種類ですか？",
+        "太陽からのエネルギーを集めて有機化合物へと変化させる生物の種類は何ですか？",
+        "太陽からのエネルギーを収集し、有機化合物に転換する生物の種類を教えてください。"
+      ],
+      "answer": "独立栄養生物"
+    }
+  ],
+  "zh": [
+    {
+      "original_question": "请列举两点蝌蚪与成蛙之间的区别。",
+      "rephrased_questions": [
+        "蝌蚪与成蛙有哪些区别？请列举两点。",
+        "请指出蝌蚪和成蛙之间的两点区别。",
+        "请说明蝌蚪与成蛙的两点不同之处。",
+        "蝌蚪与成蛙有何两点区别？",
+        "在蝌蚪和成蛙之间，请提出两点区别。"
+      ],
+      "answer": "蝌蚪没有腿并且有鳃"
+    },
+    {
+      "original_question": "真核细胞的细胞核分裂的过程是什么？",
+      "rephrased_questions": [
+        "真核细胞的细胞核分裂的过程是什么？",
+        "真核细胞的细胞核分裂的过程是什么？",
+        "真核细胞的细胞核分裂的过程是什么？",
+        "真核细胞的细胞核分裂的过程是什么？",
+        "真核细胞的细胞核分裂的过程是什么？"
+      ],
+      "answer": "有丝分裂"
+    },
+    {
+      "original_question": "电子俘获是哪种衰变类型？",
+      "rephrased_questions": [
+        "哪种衰变类型是电子俘获？",
+        "电子俘获，是哪种衰变类型？",
+        "衰变类型中，哪种是电子俘获？",
+        "是哪种衰变类型，电子俘获？",
+        "哪种衰变类型，电子俘获是？"
+      ],
+      "answer": "贝塔衰变"
+    },
+    {
+      "original_question": "心脏在心室收缩期间收缩时，哪个血压最高？",
+      "rephrased_questions": [
+        "当心脏在心室收缩期间收缩时，哪个血压最高？",
+        "在心室收缩期间，当心脏收缩时，哪个血压最高？",
+        "哪个血压在心脏于心室收缩期间收缩时最高？",
+        "请问，心脏在心室收缩期间收缩之时，哪种血压最高？",
+        "在心脏于心室收缩期间发生收缩时，最高的血压是哪个？"
+      ],
+      "answer": "动脉的"
+    },
+    {
+      "original_question": "哪种类型的生物从太阳收集能量并将其转化为有机化合物？",
+      "rephrased_questions": [
+        "从太阳收集能量并将其转化为有机化合物的生物是哪种类型？",
+        "能够从太阳收集能量并将其转化为有机化合物的生物属于哪种类型？",
+        "将太阳能量收集并转化为有机化合物的生物，它们是哪种类型？",
+        "从太阳收集能量然后将其转化为有机化合物的生物，其类型是什么？",
+        "收集太阳能量并将其转变成有机化合物的生物，是什么类型？"
+      ],
+      "answer": "自养生物"
+    }
+  ]
+}

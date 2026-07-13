@@ -1,0 +1,236 @@
+{
+  "question_id": "3040445",
+  "question_type": "Objects, Material and Clothing",
+  "original_question": "How high off the ground are these traffic lights?",
+  "multiple_choice_answer": "15 feet",
+  "answers_joined": "15 feet; 15 feet; 15 feet; 15 feet; clearance; clearance; 20 feet; 20 feet; 25 feet; 25 feet",
+  "original_image": "OKVQA_val2014_000000000000_3040445.jpg",
+  "num_perturbations": 7,
+  "total_rephrasings": 35,
+  "perturbations": {
+    "contrast1": {
+      "perturbation_type": "contrast",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3040445_contrast1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What distance is there between the traffic lights and the ground level?",
+          "id": "3040445_contrast1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "How far above the ground are these traffic lights situated?",
+          "id": "3040445_contrast1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What is the vertical distance between the traffic lights and the earth's surface?",
+          "id": "3040445_contrast1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "At what height are the traffic lights positioned relative to the ground?",
+          "id": "3040445_contrast1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "How many units of measurement are there between the traffic lights and the ground?",
+          "id": "3040445_contrast1_rephrased5"
+        }
+      ]
+    },
+    "blur1": {
+      "perturbation_type": "blur",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3040445_blur1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What is the vertical distance between the traffic lights and the ground?",
+          "id": "3040445_blur1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "How far above the ground are these traffic lights?",
+          "id": "3040445_blur1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What is the height of these traffic lights above the ground level?",
+          "id": "3040445_blur1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "At what height are the traffic lights situated in relation to the ground?",
+          "id": "3040445_blur1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "How many feet above the ground are these traffic lights?",
+          "id": "3040445_blur1_rephrased5"
+        }
+      ]
+    },
+    "rotate1": {
+      "perturbation_type": "rotate",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3040445_rotate1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What is the vertical distance from the ground to the traffic lights?",
+          "id": "3040445_rotate1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "How far above the ground are the traffic lights situated?",
+          "id": "3040445_rotate1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What is the height of the traffic lights above the ground level?",
+          "id": "3040445_rotate1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "How many feet are the traffic lights elevated from the ground?",
+          "id": "3040445_rotate1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "At what height above the ground are the traffic lights positioned?",
+          "id": "3040445_rotate1_rephrased5"
+        }
+      ]
+    },
+    "shift1": {
+      "perturbation_type": "shift",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3040445_shift1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What is the vertical distance between the ground and these traffic lights?",
+          "id": "3040445_shift1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "How far above the ground are the traffic lights?",
+          "id": "3040445_shift1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "At what height are the traffic lights situated above the ground?",
+          "id": "3040445_shift1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "How tall are the traffic lights relative to the surrounding ground level?",
+          "id": "3040445_shift1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What is the elevation of the traffic lights above the ground?",
+          "id": "3040445_shift1_rephrased5"
+        }
+      ]
+    },
+    "noise1": {
+      "perturbation_type": "noise",
+      "perturbation_intensity": "10.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3040445_noise1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What distance separates the bottom of these traffic lights from the ground?",
+          "id": "3040445_noise1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "How far down from the traffic lights is the ground?",
+          "id": "3040445_noise1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What is the vertical distance from the ground to the bottom of these traffic lights?",
+          "id": "3040445_noise1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "At what height above the ground are the bases of these traffic lights?",
+          "id": "3040445_noise1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What is the vertical clearance between the traffic lights and the ground?",
+          "id": "3040445_noise1_rephrased5"
+        }
+      ]
+    },
+    "masking1": {
+      "perturbation_type": "masking",
+      "perturbation_intensity": "10.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3040445_masking1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What is the vertical distance from the ground to these traffic lights?",
+          "id": "3040445_masking1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "How far above the ground are the traffic lights positioned?",
+          "id": "3040445_masking1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "At what height are the traffic lights situated relative to the ground?",
+          "id": "3040445_masking1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "How tall are the traffic lights in relation to the ground?",
+          "id": "3040445_masking1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What is the elevation of the traffic lights above the ground?",
+          "id": "3040445_masking1_rephrased5"
+        }
+      ]
+    },
+    "bw1": {
+      "perturbation_type": "bw",
+      "perturbation_intensity": "",
+      "perturbed_image": "OKVQA_val2014_000000000000_3040445_bw1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What distance separates the bottom of these traffic lights from the ground level?",
+          "id": "3040445_bw1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "How far apart are the traffic lights and the ground surface?",
+          "id": "3040445_bw1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What is the vertical distance from the ground to the base of the traffic lights?",
+          "id": "3040445_bw1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "How tall are these traffic lights measured from the ground up?",
+          "id": "3040445_bw1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What is the vertical height of the traffic lights above the ground?",
+          "id": "3040445_bw1_rephrased5"
+        }
+      ]
+    }
+  }
+}

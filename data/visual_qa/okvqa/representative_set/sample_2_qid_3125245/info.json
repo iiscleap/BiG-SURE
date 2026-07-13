@@ -1,0 +1,236 @@
+{
+  "question_id": "3125245",
+  "question_type": "Cooking and Food",
+  "original_question": "What flavour of cake is this?",
+  "multiple_choice_answer": "vanilla",
+  "answers_joined": "vanilla; vanilla; vanilla; vanilla; vanilla; vanilla; lemon; lemon; lemon vanilla; lemon vanilla",
+  "original_image": "OKVQA_val2014_000000000000_3125245.jpg",
+  "num_perturbations": 7,
+  "total_rephrasings": 35,
+  "perturbations": {
+    "contrast1": {
+      "perturbation_type": "contrast",
+      "perturbation_intensity": "3.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3125245_contrast1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What kind of cake flavour does this have?",
+          "id": "3125245_contrast1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What is the flavor of this cake?",
+          "id": "3125245_contrast1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What flavor of cake are we looking at here?",
+          "id": "3125245_contrast1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What's the flavor of this particular cake?",
+          "id": "3125245_contrast1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What flavor does this cake happen to be?",
+          "id": "3125245_contrast1_rephrased5"
+        }
+      ]
+    },
+    "blur1": {
+      "perturbation_type": "blur",
+      "perturbation_intensity": "3.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3125245_blur1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What variety of cake is this?",
+          "id": "3125245_blur1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What kind of cake is this?",
+          "id": "3125245_blur1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What type of cake is this?",
+          "id": "3125245_blur1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What is the flavor of this cake?",
+          "id": "3125245_blur1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What kind of flavor does this cake have?",
+          "id": "3125245_blur1_rephrased5"
+        }
+      ]
+    },
+    "rotate1": {
+      "perturbation_type": "rotate",
+      "perturbation_intensity": "3.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3125245_rotate1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What type of cake flavor is this one?",
+          "id": "3125245_rotate1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What is the flavor of this cake?",
+          "id": "3125245_rotate1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What flavor cake is this?",
+          "id": "3125245_rotate1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What kind of flavor does this cake have?",
+          "id": "3125245_rotate1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What flavor is this particular cake?",
+          "id": "3125245_rotate1_rephrased5"
+        }
+      ]
+    },
+    "shift1": {
+      "perturbation_type": "shift",
+      "perturbation_intensity": "3.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3125245_shift1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What type of cake flavor is this?",
+          "id": "3125245_shift1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What's the flavor of the cake in front of me?",
+          "id": "3125245_shift1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What flavor cake is this particular cake?",
+          "id": "3125245_shift1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What is the flavor of this cake?",
+          "id": "3125245_shift1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What flavor of dessert is this cake?",
+          "id": "3125245_shift1_rephrased5"
+        }
+      ]
+    },
+    "noise1": {
+      "perturbation_type": "noise",
+      "perturbation_intensity": "10.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3125245_noise1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What type of cake flavour is this?",
+          "id": "3125245_noise1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What is the flavour of this cake?",
+          "id": "3125245_noise1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What kind of flavour does this cake have?",
+          "id": "3125245_noise1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What's the flavour of the cake I'm looking at?",
+          "id": "3125245_noise1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What flavour of cake am I currently looking at?",
+          "id": "3125245_noise1_rephrased5"
+        }
+      ]
+    },
+    "masking1": {
+      "perturbation_type": "masking",
+      "perturbation_intensity": "10.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_3125245_masking1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What type of cake is this?",
+          "id": "3125245_masking1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What kind of cake flavor is this?",
+          "id": "3125245_masking1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What's the flavor of this cake?",
+          "id": "3125245_masking1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What's the type of flavor this cake has?",
+          "id": "3125245_masking1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What flavor does this cake have?",
+          "id": "3125245_masking1_rephrased5"
+        }
+      ]
+    },
+    "bw1": {
+      "perturbation_type": "bw",
+      "perturbation_intensity": "",
+      "perturbed_image": "OKVQA_val2014_000000000000_3125245_bw1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What type of cake flavor is this one?",
+          "id": "3125245_bw1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What flavor of cake does this belong to?",
+          "id": "3125245_bw1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What kind of cake flavor does this have?",
+          "id": "3125245_bw1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What is the flavor of this cake?",
+          "id": "3125245_bw1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What flavor is this particular cake?",
+          "id": "3125245_bw1_rephrased5"
+        }
+      ]
+    }
+  }
+}

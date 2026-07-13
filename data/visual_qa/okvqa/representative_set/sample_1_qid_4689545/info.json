@@ -1,0 +1,236 @@
+{
+  "question_id": "4689545",
+  "question_type": "Other",
+  "original_question": "What brand makes the gaming system shown?",
+  "multiple_choice_answer": "nintendo",
+  "answers_joined": "nintendo; nintendo; nintendo; nintendo; wii; wii; wii; wii; sony; sony",
+  "original_image": "OKVQA_val2014_000000000000_4689545.jpg",
+  "num_perturbations": 7,
+  "total_rephrasings": 35,
+  "perturbations": {
+    "contrast1": {
+      "perturbation_type": "contrast",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4689545_contrast1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What company manufactures the gaming console being displayed?",
+          "id": "4689545_contrast1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "Which brand is responsible for creating the gaming system shown?",
+          "id": "4689545_contrast1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What gaming console brand is featured in the image?",
+          "id": "4689545_contrast1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What brand of gaming system can be seen in the picture?",
+          "id": "4689545_contrast1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What gaming system manufacturer is depicted in the visual?",
+          "id": "4689545_contrast1_rephrased5"
+        }
+      ]
+    },
+    "blur1": {
+      "perturbation_type": "blur",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4689545_blur1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What is the name of the gaming system manufacturer featured?",
+          "id": "4689545_blur1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What brand produces the gaming system in the image?",
+          "id": "4689545_blur1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "Which company created the gaming system shown?",
+          "id": "4689545_blur1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What gaming system brand is being showcased?",
+          "id": "4689545_blur1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What is the brand name of the gaming console displayed?",
+          "id": "4689545_blur1_rephrased5"
+        }
+      ]
+    },
+    "rotate1": {
+      "perturbation_type": "rotate",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4689545_rotate1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What is the manufacturer of the gaming system depicted?",
+          "id": "4689545_rotate1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What company produces the gaming system shown in the image?",
+          "id": "4689545_rotate1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "Which brand is responsible for creating the gaming system on display?",
+          "id": "4689545_rotate1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What is the name of the company that makes the gaming system shown?",
+          "id": "4689545_rotate1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What company is the creator of the gaming system in question?",
+          "id": "4689545_rotate1_rephrased5"
+        }
+      ]
+    },
+    "shift1": {
+      "perturbation_type": "shift",
+      "perturbation_intensity": "8.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4689545_shift1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What is the name of the manufacturer of the gaming system displayed?",
+          "id": "4689545_shift1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What brand is the gaming system shown?",
+          "id": "4689545_shift1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What company produces the gaming system shown in the image?",
+          "id": "4689545_shift1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What is the brand of the gaming console shown?",
+          "id": "4689545_shift1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "Who is the manufacturer of the gaming system being shown?",
+          "id": "4689545_shift1_rephrased5"
+        }
+      ]
+    },
+    "noise1": {
+      "perturbation_type": "noise",
+      "perturbation_intensity": "5.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4689545_noise1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What company manufactures the gaming console displayed?",
+          "id": "4689545_noise1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "Which brand is the gaming system shown produced by?",
+          "id": "4689545_noise1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What company produced the gaming console shown?",
+          "id": "4689545_noise1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What brand is the gaming system shown made by?",
+          "id": "4689545_noise1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What company is the maker of the gaming console shown?",
+          "id": "4689545_noise1_rephrased5"
+        }
+      ]
+    },
+    "masking1": {
+      "perturbation_type": "masking",
+      "perturbation_intensity": "5.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_4689545_masking1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What is the name of the gaming system manufacturer shown?",
+          "id": "4689545_masking1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What brand is the gaming system displayed?",
+          "id": "4689545_masking1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "Who is the manufacturer of the gaming system shown?",
+          "id": "4689545_masking1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What brand produces the gaming system in the image?",
+          "id": "4689545_masking1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What is the brand of the gaming system depicted?",
+          "id": "4689545_masking1_rephrased5"
+        }
+      ]
+    },
+    "bw1": {
+      "perturbation_type": "bw",
+      "perturbation_intensity": "",
+      "perturbed_image": "OKVQA_val2014_000000000000_4689545_bw1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "What company manufactures the gaming console displayed?",
+          "id": "4689545_bw1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "Which brand is responsible for creating the gaming system shown?",
+          "id": "4689545_bw1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What brand of gaming console is being depicted in the image?",
+          "id": "4689545_bw1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What is the brand name of the gaming system featured?",
+          "id": "4689545_bw1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "What company produces the gaming console seen in the image?",
+          "id": "4689545_bw1_rephrased5"
+        }
+      ]
+    }
+  }
+}

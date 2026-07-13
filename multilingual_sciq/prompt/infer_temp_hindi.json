@@ -1,0 +1,13 @@
+{
+    "description": "Hindi Closed-book Question-Answering Template for TriviaQA Hindi.",
+        "instruction": {
+        "hi": "आप एक उत्कृष्ट प्रश्न उत्तरदाता हैं। कृपया निम्नलिखित प्रश्नों का सही उत्तर दें।"
+    },
+    "standard_prompt": {
+        "hi": "{instruction}\n\n{examples}\n\n*** प्रश्न ***: {question}\n*** उत्तर ***: "
+    },
+    "output_split": "***",
+        "few_shot_split": {
+        "hi": ["प्रश्न", "उत्तर"]
+    }
+}

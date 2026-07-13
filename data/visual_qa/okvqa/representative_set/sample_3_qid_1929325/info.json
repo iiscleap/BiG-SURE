@@ -1,0 +1,236 @@
+{
+  "question_id": "1929325",
+  "question_type": "Sports and Recreation",
+  "original_question": "What areas of the united states would this sport be common in?",
+  "multiple_choice_answer": "north",
+  "answers_joined": "north; north; north; north; minnesota; minnesota; muntains; muntains; mountains; mountains",
+  "original_image": "OKVQA_val2014_000000000000_1929325.jpg",
+  "num_perturbations": 7,
+  "total_rephrasings": 35,
+  "perturbations": {
+    "contrast1": {
+      "perturbation_type": "contrast",
+      "perturbation_intensity": "4.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_1929325_contrast1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "In which regions of the United States would this sport be widely practiced?",
+          "id": "1929325_contrast1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "Where are the areas in the United States where this sport would be commonly found?",
+          "id": "1929325_contrast1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What parts of the United States would have a high participation rate in this sport?",
+          "id": "1929325_contrast1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "In which areas of the United States is this sport likely to be popular?",
+          "id": "1929325_contrast1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "Where in the United States would this sport have a significant following?",
+          "id": "1929325_contrast1_rephrased5"
+        }
+      ]
+    },
+    "blur1": {
+      "perturbation_type": "blur",
+      "perturbation_intensity": "4.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_1929325_blur1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "Which regions in the United States would be most likely to have a strong following for this sport?",
+          "id": "1929325_blur1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "Where are the areas in the United States where this sport is commonly practiced?",
+          "id": "1929325_blur1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "In what parts of the United States would people typically engage in this sport?",
+          "id": "1929325_blur1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What areas within the United States have a high likelihood of this sport being popular?",
+          "id": "1929325_blur1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "Where in the United States would this sport be most commonly found?",
+          "id": "1929325_blur1_rephrased5"
+        }
+      ]
+    },
+    "rotate1": {
+      "perturbation_type": "rotate",
+      "perturbation_intensity": "4.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_1929325_rotate1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "Where would this sport typically be popular in the United States?",
+          "id": "1929325_rotate1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "Which regions of the United States have a high likelihood of this sport being practiced?",
+          "id": "1929325_rotate1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "What parts of the United States would be most likely to have a strong following for this sport?",
+          "id": "1929325_rotate1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "In which areas of the United States would this sport be a common sight?",
+          "id": "1929325_rotate1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "Where in the United States would this sport be widely recognized and participated in?",
+          "id": "1929325_rotate1_rephrased5"
+        }
+      ]
+    },
+    "shift1": {
+      "perturbation_type": "shift",
+      "perturbation_intensity": "4.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_1929325_shift1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "Which regions in the United States would typically feature this sport?",
+          "id": "1929325_shift1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "In which parts of the United States is this sport frequently practiced?",
+          "id": "1929325_shift1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "Where in the United States can this sport be commonly observed?",
+          "id": "1929325_shift1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What parts of the United States would be most associated with this sport?",
+          "id": "1929325_shift1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "In what areas of the United States is this sport generally prevalent?",
+          "id": "1929325_shift1_rephrased5"
+        }
+      ]
+    },
+    "noise1": {
+      "perturbation_type": "noise",
+      "perturbation_intensity": "6.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_1929325_noise1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "Which regions in the United States would likely have a high prevalence of this sport?",
+          "id": "1929325_noise1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "What parts of the United States would be most associated with this sport?",
+          "id": "1929325_noise1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "In which areas of the United States would this sport be widely practiced?",
+          "id": "1929325_noise1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What areas of the United States would be characterized by a strong presence of this sport?",
+          "id": "1929325_noise1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "Where in the United States would this sport be commonly found?",
+          "id": "1929325_noise1_rephrased5"
+        }
+      ]
+    },
+    "masking1": {
+      "perturbation_type": "masking",
+      "perturbation_intensity": "6.0",
+      "perturbed_image": "OKVQA_val2014_000000000000_1929325_masking1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "Which regions in the United States would this sport typically be practiced in?",
+          "id": "1929325_masking1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "Where are the areas in the United States that this sport is most commonly found?",
+          "id": "1929325_masking1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "In which parts of the United States is this sport a popular activity?",
+          "id": "1929325_masking1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What parts of the United States have a high prevalence of this sport?",
+          "id": "1929325_masking1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "Where in the United States can this sport be commonly observed?",
+          "id": "1929325_masking1_rephrased5"
+        }
+      ]
+    },
+    "bw1": {
+      "perturbation_type": "bw",
+      "perturbation_intensity": "",
+      "perturbed_image": "OKVQA_val2014_000000000000_1929325_bw1.jpg",
+      "rephrasings": [
+        {
+          "rephrase_idx": "1",
+          "rephrased_question": "Which regions of the United States would typically have a high prevalence of this sport?",
+          "id": "1929325_bw1_rephrased1"
+        },
+        {
+          "rephrase_idx": "2",
+          "rephrased_question": "In what parts of the country would this sport be most commonly practiced?",
+          "id": "1929325_bw1_rephrased2"
+        },
+        {
+          "rephrase_idx": "3",
+          "rephrased_question": "Where in the United States would this sport be a common sight?",
+          "id": "1929325_bw1_rephrased3"
+        },
+        {
+          "rephrase_idx": "4",
+          "rephrased_question": "What areas of the United States would have a strong following for this sport?",
+          "id": "1929325_bw1_rephrased4"
+        },
+        {
+          "rephrase_idx": "5",
+          "rephrased_question": "In which areas of the United States would this sport be a popular pastime?",
+          "id": "1929325_bw1_rephrased5"
+        }
+      ]
+    }
+  }
+}

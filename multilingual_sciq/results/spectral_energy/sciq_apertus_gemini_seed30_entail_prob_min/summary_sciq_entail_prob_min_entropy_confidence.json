@@ -1,0 +1,23 @@
+{
+  "dataset": "sciq",
+  "score_mode": "entail_prob",
+  "combine": "min",
+  "weighting_scheme": "entropy_confidence",
+  "divergence_measure": "js",
+  "total_rephrasing_language_pairs": 7375,
+  "base_questions_per_language": {
+    "en": 295,
+    "fr": 295,
+    "ja": 295,
+    "th": 295,
+    "zh": 295
+  },
+  "auroc_by_language": {
+    "en": 0.7460952380952381,
+    "zh": 0.7283796296296297,
+    "ja": 0.7208857808857809,
+    "fr": 0.5520045581684451,
+    "th": 0.6401960784313725
+  },
+  "mean_auroc": 0.6775122570420933
+}
