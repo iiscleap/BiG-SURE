@@ -52,5 +52,10 @@ for MODEL in "${MODELS[@]}"; do
       --experiment_lot "okvqa_vanilla" \
       --metric "vqa_acc" \
       2>&1 | tee "logs/${MODEL_SAFE}_okvqa_vanilla_seed${SEED}.log"
+    "${PYTHON_BIN}" evaluation/validate_okvqa_artifacts.py \
+      --vanilla "${OUTPUT}" \
+      --expected-examples "${NUM_SAMPLES}" \
+      --high-temp "${NUM_GENERATIONS}" \
+      --low-temp "${NUM_LOW_TEMP_GENERATIONS}"
   done
 done

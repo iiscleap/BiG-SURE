@@ -376,9 +376,21 @@ def logsumexp_by_id(semantic_ids, log_likelihoods, agg='sum_normalized', return_
 
     Log-Sum-Exp because input and output probabilities in log space.
     """
-    unique_ids = sorted(list(set(semantic_ids)))
-    assert unique_ids == list(range(len(unique_ids)))
+    if len(semantic_ids) != len(log_likelihoods):
+        raise ValueError('semantic_ids and log_likelihoods must have the same length')
+    unique_ids = sorted(set(semantic_ids))
+    if unique_ids != list(range(len(unique_ids))):
+        raise ValueError(f'semantic IDs must be contiguous from zero; got {unique_ids}')
     log_likelihood_per_semantic_id = []
+
+    def stable_logsumexp(values):
+        values = np.asarray(values, dtype=float)
+        maximum = np.max(values)
+        if np.isneginf(maximum):
+            return float('-inf')
+        return float(maximum + np.log(np.exp(values - maximum).sum()))
+
+    normalization = stable_logsumexp(log_likelihoods) if len(log_likelihoods) else 0.0
 
     for uid in unique_ids:
         # Find positions in `semantic_ids` which belong to the active `uid`.
@@ -386,9 +398,7 @@ def logsumexp_by_id(semantic_ids, log_likelihoods, agg='sum_normalized', return_
         # Gather log likelihoods at these indices.
         id_log_likelihoods = [log_likelihoods[i] for i in id_indices]
         if agg == 'sum_normalized':
-            # log_lik_norm = id_log_likelihoods - np.prod(log_likelihoods)
-            log_lik_norm = id_log_likelihoods - np.log(np.sum(np.exp(log_likelihoods)))
-            logsumexp_value = np.log(np.sum(np.exp(log_lik_norm)))
+            logsumexp_value = stable_logsumexp(id_log_likelihoods) - normalization
         else:
             raise ValueError
         log_likelihood_per_semantic_id.append(logsumexp_value)

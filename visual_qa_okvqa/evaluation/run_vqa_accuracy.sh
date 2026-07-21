@@ -10,12 +10,23 @@ cd "${ROOT}"
 export PYTHONPATH="${ROOT}:${PYTHONPATH:-}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 
-for PKL in outputs/responses/vanilla/*/validation_generations.pkl; do
+shopt -s nullglob
+PKLS=(outputs/responses/vanilla/*/validation_generations.pkl)
+[[ "${#PKLS[@]}" -gt 0 ]] || {
+  echo "No vanilla generations found under outputs/responses/vanilla/. Run inference/run_vanilla_generation.sh first." >&2
+  exit 1
+}
+
+for PKL in "${PKLS[@]}"; do
   RUN_NAME="$(basename "$(dirname "${PKL}")")"
-  "${PYTHON_BIN}" evaluation/compute_vqa_accuracies.py \
-    --vanilla_run_dir "$(dirname "${PKL}")" \
-    --predictions "${PKL}" \
-    --metadata "${DATA_ROOT}/metadata.csv" \
+  "${PYTHON_BIN}" evaluation/calc_vqa_accuracy.py \
+    --input "${PKL}" \
     --dataset okvqa \
     --output "outputs/responses/vanilla/${RUN_NAME}/vqa_accuracy.json"
+  "${PYTHON_BIN}" evaluation/validate_okvqa_artifacts.py \
+    --vanilla "${PKL}" \
+    --accuracy "outputs/responses/vanilla/${RUN_NAME}/vqa_accuracy.json" \
+    --expected-examples 200 \
+    --high-temp 10 \
+    --low-temp 3
 done

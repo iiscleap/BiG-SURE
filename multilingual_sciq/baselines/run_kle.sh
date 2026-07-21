@@ -13,6 +13,7 @@ LANGUAGES=(en zh ja fr)
 DATASETS=("sciq")
 MODELS=("apertus" "aya")
 SEEDS=(10 20 30 40 50)
+PYTHON_BIN="${PYTHON_BIN:-python}"
 
 for DATASET in "${DATASETS[@]}"; do
   for MODEL in "${MODELS[@]}"; do
@@ -25,7 +26,7 @@ for DATASET in "${DATASETS[@]}"; do
         continue
       fi
 
-      python "${SCRIPT_DIR}/compute_multilingual_kle.py" \
+      "${PYTHON_BIN}" "${SCRIPT_DIR}/compute_multilingual_kle.py" \
         --vanilla_json "${VANILLA_JSON}" \
         --sampling_json "${SAMPLING_JSON}" \
         --output_dir "${RESULTS_BASE}/${DATASET}_${MODEL}_seed${SEED}_gemini" \

@@ -48,6 +48,47 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
+def extract_response_text(item):
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        for key in ('response', 'answer', 'text', 'output'):
+            if key in item:
+                return extract_response_text(item[key])
+    if isinstance(item, (list, tuple)) and item:
+        return extract_response_text(item[0])
+    return None
+
+
+def build_rephrased_lookup(sampling_data):
+    grouped = defaultdict(list)
+    seen_ids = set()
+    for item in sampling_data:
+        if item.get('question_id') is None or item.get('original_id') is None:
+            raise ValueError('Every rephrased record must contain question_id and original_id.')
+        record_id = str(item['question_id'])
+        if record_id in seen_ids:
+            raise ValueError(f'Duplicate rephrased question ID: {record_id}')
+        seen_ids.add(record_id)
+        grouped[str(item['original_id'])].append(item)
+    for base_qid, variants in grouped.items():
+        variants.sort(key=lambda item: (item.get('rephrase_idx', 0), str(item['question_id'])))
+        if len(variants) != 5:
+            raise ValueError(f'Question {base_qid} has {len(variants)} rephrases; expected 5.')
+    return grouped
+
+
+def is_ordered_subsequence(items, candidates):
+    cursor = 0
+    for item in items:
+        while cursor < len(candidates) and candidates[cursor] != item:
+            cursor += 1
+        if cursor == len(candidates):
+            return False
+        cursor += 1
+    return True
+
+
 # ==================== SIMILARITY FUNCTIONS ====================
 
 def normalize_text(s: str) -> str:
@@ -233,6 +274,13 @@ def _kl_divergence(P, Q):
 def load_results_npz(filepath):
     """Load precomputed entailments."""
     data = np.load(filepath, allow_pickle=True)
+    schema_version = int(data['schema_version'][0]) if 'schema_version' in data.files else 1
+    if schema_version < 2:
+        raise ValueError(
+            'Legacy multilingual entailment artifact detected. Re-run '
+            'baselines/run_precompute_multilingual.sh to aggregate all five rephrases '
+            'and exclude their greedy answers.'
+        )
     question_ids = data['question_ids'].tolist()
     languages = data['languages'].tolist()
     
@@ -243,7 +291,8 @@ def load_results_npz(filepath):
             'probs_fwd': data[f"{prefix}_probs_fwd"],
             'probs_bwd': data[f"{prefix}_probs_bwd"],
             'low_texts': data[f"{prefix}_low_texts"].tolist(),
-            'high_texts': data[f"{prefix}_high_texts"].tolist()
+            'high_texts': data[f"{prefix}_high_texts"].tolist(),
+            'paraphrase_indices': data[f"{prefix}_paraphrase_indices"].tolist(),
         }
     
     return results
@@ -600,14 +649,9 @@ def compute_multilingual_spectral_energy(vanilla_data, sampling_data, precompute
         qid = item['question_id']
         vanilla_lookup[str(qid)] = item
     
-    # Build sampling lookup to get paraphrase structure
-    sampling_lookup = defaultdict(lambda: defaultdict(list))
-    for item in sampling_data:
-        qid = item['question_id']
-        for lang in LANGUAGES:
-            if lang in item.get('output', {}):
-                outputs = item['output'][lang]
-                sampling_lookup[qid][lang] = outputs
+    rephrased_lookup = build_rephrased_lookup(sampling_data)
+    if set(vanilla_lookup) != set(rephrased_lookup):
+        raise ValueError('Vanilla, rephrased, and entailment inputs must cover identical questions.')
     
     logger.info(f"Computing WEIGHTED spectral energy for {len(precomputed_entailments)} (question, language) pairs")
     logger.info(f"Loaded {len(vanilla_lookup)} vanilla questions for accuracy computation")
@@ -629,27 +673,46 @@ def compute_multilingual_spectral_energy(vanilla_data, sampling_data, precompute
         # Extract base question ID (remove rephrasing suffix like _r0, _r1, etc.)
         base_qid = str(qid).split('_r')[0] if '_r' in str(qid) else str(qid)
         
-        # Get paraphrase structure from sampling data
-        # For multilingual: we have 5 paraphrases × 10 samples each = 50 high-temp answers
-        # Paraphrase indices: [0,0,...,0 (10 times), 1,1,...,1 (10 times), ...]
-        num_paraphrases = 5
-        
-        # Determine samples per paraphrase based on matrix dimensions
         n_high = probs_fwd.shape[1]  # Number of high-T columns in entailments
-        if n_high >= num_paraphrases:
-            samples_per_paraphrase = n_high // num_paraphrases
-        else:
-            samples_per_paraphrase = 1
-            num_paraphrases = n_high
-        
-        paraphrase_indices = []
-        for para_idx in range(num_paraphrases):
-            paraphrase_indices.extend([para_idx] * samples_per_paraphrase)
-        # Handle remainder
-        if len(paraphrase_indices) < n_high:
-            remainder = n_high - len(paraphrase_indices)
-            paraphrase_indices.extend([num_paraphrases - 1] * remainder)
-        paraphrase_indices = paraphrase_indices[:n_high]
+        paraphrase_indices = entail_data.get('paraphrase_indices', [])
+        expected_shape = (len(entail_data.get('low_texts', [])), n_high, 3)
+        if probs_fwd.shape != expected_shape or probs_bwd.shape != expected_shape:
+            raise ValueError(f'Entailment probability shape mismatch for {qid}/{lang}.')
+        vanilla_outputs = vanilla_lookup[base_qid].get('output', {}).get(lang, [])
+        if len(vanilla_outputs) != 4:
+            raise ValueError(f'Vanilla question {base_qid}/{lang} must have 1 greedy + 3 low-T outputs.')
+        expected_low_texts = [extract_response_text(output) for output in vanilla_outputs[1:]]
+        if expected_low_texts != entail_data.get('low_texts', []):
+            raise ValueError(
+                f'Vanilla low-T responses no longer match entailments for {qid}/{lang}. '
+                'Rerun multilingual entailment precompute.'
+            )
+        expected_high_texts = []
+        expected_paraphrase_indices = []
+        for paraphrase_index, variant in enumerate(rephrased_lookup[base_qid]):
+            outputs = variant.get('output', {}).get(lang, [])
+            if len(outputs) != 11:
+                raise ValueError(
+                    f'Rephrased question {variant.get("question_id")}/{lang} has '
+                    f'{len(outputs)} outputs; expected one greedy plus ten stochastic outputs.'
+                )
+            stochastic = [extract_response_text(output) for output in outputs[1:]]
+            if any(text is None for text in stochastic):
+                raise ValueError(f'Rephrased question {variant.get("question_id")}/{lang} has invalid outputs.')
+            expected_high_texts.extend(stochastic)
+            expected_paraphrase_indices.extend([paraphrase_index] * len(stochastic))
+        archived_pairs = list(zip(high_texts, paraphrase_indices))
+        expected_pairs = list(zip(expected_high_texts, expected_paraphrase_indices))
+        if not is_ordered_subsequence(archived_pairs, expected_pairs):
+            raise ValueError(
+                f'Rephrased responses no longer match the entailment archive for {qid}/{lang}. '
+                'Rerun multilingual entailment precompute.'
+            )
+        if len(paraphrase_indices) != n_high:
+            raise ValueError(
+                f'Entailment artifact {qid}/{lang} has {n_high} high-T columns but '
+                f'{len(paraphrase_indices)} paraphrase indices.'
+            )
         
         # Subsample if needed (sample uniformly from all columns, preserve paraphrase tracking)
         if subsample_high_t and probs_fwd.shape[1] > subsample_high_t:
@@ -666,18 +729,16 @@ def compute_multilingual_spectral_energy(vanilla_data, sampling_data, precompute
         W = probs_to_weights_matrix(probs_fwd, probs_bwd, score_mode, combine)
         
         # Compute paraphrase weights
-        if len(high_texts) > 0 and len(high_texts) == W.shape[1]:
-            weights = compute_paraphrase_weights(
-                high_texts, paraphrase_indices,
-                weighting_scheme, divergence_measure, sim_threshold
-            )
-        else:
-            # Fallback to uniform weights if texts don't match
-            weights = np.ones(W.shape[1])
+        if len(high_texts) != W.shape[1]:
+            raise ValueError(f'Entailment text count does not match matrix columns for {qid}/{lang}.')
+        weights = compute_paraphrase_weights(
+            high_texts, paraphrase_indices,
+            weighting_scheme, divergence_measure, sim_threshold
+        )
         
         # Ensure weights match W columns
         if len(weights) != W.shape[1]:
-            weights = np.ones(W.shape[1])
+            raise ValueError(f'Column weights do not match matrix columns for {qid}/{lang}.')
         
         # Compute weighted spectral energy
         result = compute_weighted_spectral_energy_from_W(W, weights)
@@ -944,9 +1005,33 @@ def main():
     
     logger.info(f"Loading sampling data from {args.sampling_file}")
     sampling_data = load_json_data(args.sampling_file)
+
+    if args.metric in ('claude', 'gemini'):
+        for item in vanilla_data:
+            accuracy = item.get('accuracy', {})
+            missing_languages = [language for language in LANGUAGES if language not in accuracy]
+            if missing_languages:
+                raise ValueError(
+                    f'Evaluated vanilla question {item.get("question_id")} is missing '
+                    f'{args.metric} labels for {missing_languages}.'
+                )
     
     logger.info(f"Loading precomputed entailments from {args.entailments_file}")
     precomputed_entailments = load_results_npz(args.entailments_file)
+
+    expected_pairs = {
+        (str(item['question_id']), language)
+        for item in vanilla_data
+        for language in LANGUAGES
+    }
+    actual_pairs = {(str(qid), lang) for qid, lang in precomputed_entailments}
+    if actual_pairs != expected_pairs:
+        missing = sorted(expected_pairs - actual_pairs)
+        extra = sorted(actual_pairs - expected_pairs)
+        raise ValueError(
+            'Entailment archive does not match evaluated vanilla generations. '
+            f'Missing pairs: {missing[:3]}; extra pairs: {extra[:3]}.'
+        )
     
     # Compute weighted spectral energy
     results = compute_multilingual_spectral_energy(

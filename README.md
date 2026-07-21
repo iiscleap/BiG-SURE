@@ -3,7 +3,7 @@
 BiG-SURE is the consolidated codebase for uncertainty estimation with stochastic generations, standard baselines, and BiG-SURE spectral energy across three task settings:
 
 - Text QA: TriviaQA and SVAMP.
-- Visual QA: the 200-example OKVQA subset.
+- Visual QA: OKVQA.
 - Multilingual QA: SciQ in English, Chinese, Japanese, and French.
 
 This README only covers environment setup and data placement. Use the task README for generation, evaluation, baseline, entailment, and BiG-SURE run instructions:
@@ -93,7 +93,7 @@ PYTHONPATH="$PWD/text_qa:$PWD/multilingual_sciq/baselines" python -c "import mul
 
 ## Data Installation
 
-The `data/` directory is a separate downloadable payload. Place the downloaded folder at the repository root so the layout is:
+The `data/` directory is a separate. Root so the layout is:
 
 ```text
 BiG-SURE/

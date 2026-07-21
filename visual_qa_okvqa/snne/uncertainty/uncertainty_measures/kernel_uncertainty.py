@@ -59,18 +59,19 @@ class EntailmentDeberta(BaseEntailment):
             # check_implication('The weather is good', 'The weather is good and I like you') --> 1
             # check_implication('The weather is good and I like you', 'The weather is good') --> 2
 
-            outputs = self.model(**inputs)
+            with torch.no_grad():
+                outputs = self.model(**inputs)
             logits = outputs.logits
             # Deberta-mnli returns `neutral` and `entailment` classes at indices 1 and 2.
             activations = F.softmax(logits, dim=1)
             largest_index = torch.argmax(activations)  # pylint: disable=no-member
-            confidence = torch.max(activations)
+            confidence = torch.max(activations).cpu().item()
             prediction = largest_index.cpu().item()
             if os.environ.get('DEBERTA_FULL_LOG', False):
                 logging.info('Deberta Input: %s -> %s', text1, text2)
                 logging.info('Deberta Prediction: %s', prediction)
                 logging.info('Deberta Prediction Prob: %s', confidence)
-            self.prediction_cache[hashed] = (prediction, confidence.cpu().item())
+            self.prediction_cache[hashed] = (prediction, confidence)
         return prediction, confidence
     
     def save_prediction_cache(self):

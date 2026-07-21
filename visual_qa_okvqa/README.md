@@ -56,7 +56,11 @@ bash inference/run_vanilla_generation.sh
 
 For each original question-image pair, `snne/generate_okvqa_answers.py` creates one greedy response, three low-temperature responses (`--low_temp 0.1`), and ten high-temperature stochastic responses (`--temperature 1.0`).
 
-The outputs are saved below `outputs/responses/vanilla/`. The greedy response is evaluated for VQA correctness; the high-temperature samples supply the standard uncertainty baselines.
+Each run writes `validation_generations.pkl`, `uncertainty_measures.pkl`, and `experiment_details.pkl` below `outputs/responses/vanilla/<model>_seed<seed>/`. W&B receives the same artifacts. The high-temperature responses supply the standard uncertainty baselines.
+
+`validation_generations.pkl` is the canonical model-output artifact. For each question ID it contains `most_likely_answer`, three `low_temp_responses`, and ten high-temperature `responses`. The generation-time `uncertainty_measures.pkl` only records the ordered question IDs; semantic cluster IDs are derived from the ten stochastic responses when a standard baseline first needs them.
+
+After every generation command, the launcher reloads the saved pickle and validates its schema. Vanilla runs must contain 200 complete records; rephrased-perturbed runs must contain 7,000 complete records. Evaluation validates the vanilla pickle again and requires exact question-ID coverage in `vqa_accuracy.json`.
 
 ### 2. Rephrased-Perturbed Sampling
 
@@ -64,19 +68,19 @@ The outputs are saved below `outputs/responses/vanilla/`. The greedy response is
 bash inference/run_perturbed_generation.sh
 ```
 
-`snne/generate_okvqa_rephrased_perturbed.py` generates ten temperature-`1.0` samples over the rephrased questions in `rephrased_perturbations.csv` and their corresponding images in `images_perturbed/`. It writes to `outputs/responses/perturbed/`.
+`snne/generate_okvqa_rephrased_perturbed.py` generates one greedy response and ten temperature-`1.0` responses for every row in `rephrased_perturbations.csv`, using the corresponding image in `images_perturbed/`. The CSV has 35 rows per original question: five text rephrasings for each of seven image perturbations. It writes to `outputs/responses/perturbed/`.
 
-These perturbation-aware responses are specifically used by BiG-SURE, not by the standard baselines.
+The greedy perturbed response is retained for inspection; BiG-SURE uses the ten stochastic responses. Perturbed responses are not used by the standard baselines.
 
 ## Evaluation
 
-After vanilla generation, compute VQA accuracy for the low-temperature answers:
+After vanilla generation, compute official VQA accuracy for the greedy answers:
 
 ```bash
 bash evaluation/run_vqa_accuracy.sh
 ```
 
-For every vanilla run this writes `vqa_accuracy.json` next to `validation_generations.pkl`. The standard baseline and BiG-SURE launchers use the same vanilla pickle's VQA score and define a correct prediction as `vqa_acc >= 0.5`.
+For every vanilla run this writes `vqa_accuracy.json` next to `validation_generations.pkl`. Every standard baseline, entailment precompute, and BiG-SURE launcher consumes this JSON. Continuous official VQA accuracy is converted to a binary correctness label with `vqa_acc >= 0.5` for AUROC.
 
 ## Standard Baselines
 
@@ -89,11 +93,16 @@ bash baselines/run_graph_baselines.sh
 bash baselines/run_blackbox_semantic_entropy.sh
 ```
 
-Each launcher reads the ten stochastic vanilla generations from:
+Each launcher requires both files:
 
 ```text
 outputs/responses/vanilla/<model>_seed<seed>/validation_generations.pkl
+outputs/responses/vanilla/<model>_seed<seed>/vqa_accuracy.json
 ```
+
+Every baseline uses the same artifact loader. If `uncertainty_measures.pkl` or semantic cluster IDs are absent, whichever baseline is run first computes and caches them. SNNE, KLE, graph baselines, and black-box semantic entropy can therefore be run independently and in any order.
+
+The derived `uncertainty_measures.pkl` and `embedding_and_similarity.pkl` caches store the ordered question IDs from `validation_generations.pkl`. A stale cache from another seed or generation run is detected and recomputed automatically. No pickle copying, renaming, or W&B run-directory lookup is required. Launchers print the exact missing canonical artifact and fail if no complete run is available.
 
 - `run_snne.sh`: SNNE semantic/entailment and lexical uncertainty from vanilla answers.
 - `run_kle.sh`: KLE uncertainty from the vanilla answer-similarity kernel.
@@ -110,7 +119,7 @@ BiG-SURE must precompute entailments after both vanilla and rephrased-perturbed 
 bash baselines/run_precompute_okvqa_entailments.sh
 ```
 
-This calls `snne/precompute_entailments_vqa.py` for each model and seed. It compares the low-temperature vanilla answers in `outputs/responses/vanilla/` with high-temperature rephrased-perturbed answers in `outputs/responses/perturbed/`, and writes:
+This calls `snne/precompute_entailments_vqa.py` for each model and seed. Before loading the NLI model it requires exact question-ID coverage, exactly three low-temperature vanilla answers, 35 perturbed/rephrased variants per question, and ten stochastic answers per variant. It then compares the three vanilla answers against all 350 perturbed/rephrased answers, uses `vqa_accuracy.json` for labels, and writes a versioned archive:
 
 ```text
 outputs/entailments/<model>_seed<seed>_perturbed.npz
@@ -122,7 +131,7 @@ Then run the BiG-SURE spectral-energy method:
 bash baselines/run_bigsure_spectral_energy.sh
 ```
 
-The launcher uses `entail_prob + min`, entropy-confidence weighting, and Jensen-Shannon divergence. It reads each vanilla response pickle and entailment `.npz`, then writes per-run artifacts under `outputs/spectral_energy/`.
+The launcher uses `entail_prob + min`, entropy-confidence weighting, and Jensen-Shannon divergence. It reads each vanilla response pickle and entailment `.npz`, verifies their question IDs and low-temperature responses, subsamples ten of the 350 high-temperature columns deterministically, then writes per-run artifacts under `outputs/spectral_energy/`. If an older archive is rejected, rerun the precompute command above.
 
 ## Consolidation
 
@@ -132,7 +141,7 @@ After the desired baseline and BiG-SURE runs finish:
 bash baselines/run_consolidate_results.sh
 ```
 
-This reads the baseline CSV directories and `outputs/spectral_energy/`, then writes:
+This reads all available seed CSVs from the four baseline directories, the per-seed official accuracy JSONs, and per-seed summaries under `outputs/spectral_energy/`. It averages each method across available seeds and writes:
 
 ```text
 outputs/consolidated/consolidated_vqa_pivot.csv

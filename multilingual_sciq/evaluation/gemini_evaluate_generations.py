@@ -35,6 +35,20 @@ logger = logging.getLogger(__name__)
 LANGUAGES = ['en', 'zh', 'ja', 'fr']
 
 
+def load_json_records(path: str) -> list:
+    """Load either a JSON array or newline-delimited JSON records."""
+    content = Path(path).read_text(encoding='utf-8').strip()
+    if not content:
+        return []
+    if content[0] == '[':
+        data = json.loads(content)
+    else:
+        data = [json.loads(line) for line in content.splitlines() if line.strip()]
+    if not isinstance(data, list):
+        raise ValueError(f'{path} must contain a JSON array or JSONL records')
+    return data
+
+
 def get_system_prompt(dataset: str) -> str:
     """Get dataset-specific system prompt for Gemini evaluation."""
     dataset = dataset.lower()
@@ -193,8 +207,7 @@ def process_json(
 
     # Load input JSON
     logger.info(f"Loading input file: {input_path}")
-    with open(input_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    data = load_json_records(input_path)
 
     logger.info(f"Loaded {len(data)} examples")
 

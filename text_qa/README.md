@@ -27,31 +27,42 @@ bash scripts/generate/generate_qa.sh
 
 For each original question this produces one greedy response, three low-temperature (`0.1`) responses, and ten stochastic (`1.0`) responses. The greedy response is scored with SQuAD and becomes the correctness target for all later metrics.
 
-2. Generate rephrased-question stochastic responses:
+2. Compute standard baselines from the original-question stochastic responses:
+
+```bash
+bash scripts/compute/run_semantic_entropy.sh
+bash scripts/compute/run_snne.sh
+bash scripts/compute/run_kle.sh
+bash scripts/compute/run_graph_baselines.sh
+```
+
+All four launchers read the vanilla run paths recorded in `config/runs.tsv`. They use the ten temperature-`1.0` responses and the greedy SQuAD label, and write to `semantic_entropy_results/`, `snne_results/`, `kle_results/`, and `graph_baseline_results/`. Missing semantic clusters and pairwise similarities are computed on the first run and cached beside the generation pickle.
+
+3. Generate rephrased-question stochastic responses:
 
 ```bash
 bash scripts/generate/generate_rephrased_qa.sh
 ```
 
-This uses the rephrased CSV for the same task and creates ten temperature-`1.0` samples for every rephrased question. These responses are used only by BiG-SURE and its ablations.
+This uses the rephrased CSV for the same task and creates one greedy response plus ten temperature-`1.0` responses for every rephrased question. The greedy rephrased response is retained in the pickle; BiG-SURE and its ablations use the ten stochastic responses.
 
-3. Precompute DeBERTa bidirectional entailment probabilities:
+4. Precompute DeBERTa bidirectional entailment probabilities:
 
 ```bash
 bash scripts/compute/run_precompute_entailments.sh
 ```
 
-The command writes one compressed `.npz` file per task/model/seed to `outputs/entailments/`. Each archive compares the original low-temperature answers against rephrased high-temperature answers.
+Before loading DeBERTa, the command requires exact original/rephrased question-ID coverage, three low-temperature original answers, five rephrasings per question, and ten stochastic answers per rephrasing. It writes one versioned compressed `.npz` file per task/model/seed to `outputs/entailments/`, comparing the three original low-temperature answers against all 50 rephrased high-temperature answers.
 
-4. Run BiG-SURE:
+5. Run BiG-SURE:
 
 ```bash
 bash scripts/compute/run_bigsure.sh
 ```
 
-This runs `snne/compute_spectral_energy_weighted_all_modes_rephrased.py` with SQuAD correctness, DeBERTa entailment probabilities, `entail_prob + min`, entropy-confidence weighting, and Jensen-Shannon divergence. Results are written to `outputs/spectral_energy/`.
+This runs `snne/compute_spectral_energy_weighted_all_modes_rephrased.py` with SQuAD correctness, DeBERTa entailment probabilities, `entail_prob + min`, entropy-confidence weighting, and Jensen-Shannon divergence. It verifies that the supplied generations still match the versioned entailment archive, then deterministically samples ten of its 50 high-temperature columns. Results are written to `outputs/spectral_energy/`. Rerun precompute if a legacy archive is rejected.
 
-5. Run the ablations:
+6. Run the strawman ablations:
 
 ```bash
 bash scripts/compute/run_strawman_ablations.sh
@@ -59,14 +70,18 @@ bash scripts/compute/run_strawman_ablations.sh
 
 This calls `snne/compute_strawman_baselines.py` on exactly the same rephrased responses, entailment files, and vanilla SQuAD labels as BiG-SURE. It writes to `outputs/strawman_ablations/`.
 
-`config/runs.tsv` is the run manifest shared by stages 3-5. Both generation scripts create or update it automatically, with one row per task/model/seed and the corresponding local W&B directories. The compute launchers stop with a clear error when the manifest is empty and skip only incomplete rows or missing entailment files, which permits partial reruns.
+`config/runs.tsv` is shared by every compute stage. Original generation records `vanilla_run_dir`; rephrased generation adds `rephrased_run_dir` to the same task/model/seed row. Standard baselines require only the vanilla path. Entailment precompute, BiG-SURE, and strawman ablations require both paths.
 
 The TriviaQA generator is explicitly given `../data/text_qa/triviaqa/llama_validation_trivia_qa.csv`; it no longer falls back to a randomly sampled validation subset. This keeps original and rephrased generations aligned.
 
 ## Retained Code
 
 - `scripts/generate/`: original and rephrased generation.
-- `scripts/compute/`: entailment precompute, BiG-SURE, and strawman ablations.
+- `scripts/compute/`: four standard baseline launchers, entailment precompute, BiG-SURE, and strawman ablations.
+- `snne/compute_semantic_entropy.py`: black-box semantic entropy baseline.
+- `snne/compute_snne.py`: SNNE baseline.
+- `snne/compute_kle.py`: kernel language entropy baseline.
+- `snne/compute_graph_baselines.py`: graph uncertainty baselines.
 - `snne/compute_spectral_energy_weighted_all_modes_rephrased.py`: BiG-SURE implementation.
 - `snne/compute_strawman_baselines.py`: ablation implementation.
 - `snne/uncertainty/`: shared model, data, metric, and NLI runtime code required by the retained entry points.

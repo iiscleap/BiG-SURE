@@ -1,6 +1,6 @@
 # Multilingual SciQ
 
-This folder contains the multilingual SciQ slice of BiG-SURE. It is intentionally scoped to:
+This folder contains the multilingual SciQ slice of BiG-SURE. New runs are intentionally scoped to:
 
 - Dataset: SciQ only.
 - Questions: 300 original SciQ questions from `sciq_rephrased_300.json`.
@@ -42,7 +42,7 @@ The main files are:
 
 ## Precomputed Artifacts
 
-Inference and entailment precompute are expensive. This folder includes the final artifacts needed to reproduce the reported baseline and BiG-SURE numbers without rerunning generation from scratch.
+Inference and entailment precompute are expensive. This folder includes historical response, evaluation, entailment, and result artifacts from the original March run. The corrected pipeline below validates a stricter artifact contract.
 
 Included response/evaluation artifacts:
 
@@ -55,7 +55,11 @@ Included response/evaluation artifacts:
 
 These folders contain the available `generate.json`, `generate0.3.json`, `generate_with_accuracy.json`, and `generate_with_accuracy_claude.json` files copied from the original March run. The standard baseline scripts consume the evaluated vanilla files plus stochastic sampling files. BiG-SURE consumes evaluated vanilla files plus rephrased-sampling files.
 
+The historical vanilla and standard-sampling files contain 295 aligned questions, not 300. The old inference loader removed five target questions (`1`, `4`, `6`, `11`, and `12`) because they occurred in its few-shot prefix. Existing standard-baseline result folders reproduce that historical 295-question run. New inference chooses few-shot examples outside the evaluation set and produces all 300 questions.
+
 One bundled evaluation is incomplete: `apertus_sciq_infer_vanilla_seed50/` does not contain `generate_with_accuracy.json`. Run Step 3 for that seed before attempting a complete five-seed Gemini-based reproduction.
+
+Two bundled rephrased-sampling files are partial JSONL checkpoints: Apertus seed 30 has 101 of 1,500 records and Aya seed 50 has 257 of 1,500. Resume Step 2 for those runs before entailment precompute. Resume logic uses question IDs, so historical JSON arrays and JSONL checkpoints are both handled safely.
 
 Included entailments:
 
@@ -68,7 +72,7 @@ Included entailments:
 - `outputs/entailments/sciq_aya_rephrased_sampling_seed30.npz`
 - `outputs/entailments/sciq_aya_rephrased_sampling_seed40.npz`
 
-The original artifact folder did not contain `sciq_apertus_rephrased_sampling_seed30.npz` or `sciq_aya_rephrased_sampling_seed50.npz`. To recompute those two missing entailment files, run:
+The bundled `.npz` files use the legacy per-rephrase layout and are retained only with the historical result tables. The corrected BiG-SURE flow rejects them automatically. Recompute version-2 entailments for the desired model and seeds with:
 
 ```bash
 bash baselines/run_precompute_multilingual.sh
@@ -83,7 +87,7 @@ Included completed result folders:
 - `results/spectral_energy/`
 - `results/consolidated/`
 
-If you only want to inspect or reproduce tables from existing outputs, start from `results/consolidated/`. If you want to rerun metrics without expensive model inference, start from Step 4 below using the existing `outputs/` files.
+If you only want to inspect the historical tables, start from `results/consolidated/`. You can rerun standard baselines from Step 4 with the internally aligned 295-question response files. A corrected 300-question reproduction requires new inference, evaluation, and version-2 entailment precompute.
 
 ## Inference Modes
 
@@ -151,6 +155,8 @@ Outputs are written under:
 outputs/sciq/inference/
 ```
 
+Generation checkpoints are newline-delimited JSON records stored in `generate.json`. Resume, evaluation, and compute code accept both this JSONL representation and historical JSON-array files. Before loading uncertainty models, standard baselines validate unique and identically ordered question IDs, four vanilla outputs, ten sampling outputs, matching probability counts, and complete Gemini labels.
+
 ### Step 2: Generate Rephrased Sampling Outputs
 
 Skip this step if using the bundled `outputs/sciq/inference/` artifacts.
@@ -161,7 +167,7 @@ Run perturbation/rephrasing-aware stochastic generation:
 bash inference/run_rephrased_sampling.sh
 ```
 
-This runs `rephrased_sampling` for both `apertus` and `aya` over the same seed set. These outputs are used by BiG-SURE.
+This runs `rephrased_sampling` for both `apertus` and `aya` over the same seed set. Each rephrased record contains one greedy answer followed by ten stochastic answers. Only the ten stochastic answers are used by BiG-SURE.
 
 ### Step 3: Run Gemini Evaluation
 
@@ -200,6 +206,11 @@ This computes:
 - KLE.
 - Graph baselines.
 
+KLE constructs all pairwise entailment edges for one question as batches. The
+multilingual mDeBERTa adapter accepts both scalar pairs and these batched pairs,
+and `batch_size` can be adjusted in `MultilingualEntailmentDeberta.check_implication`
+if GPU memory is limited.
+
 Results are written under:
 
 ```text
@@ -211,7 +222,7 @@ results/graph_baselines/
 
 ### Step 5: Precompute Entailments For BiG-SURE
 
-Skip this step for seeds whose `.npz` files already exist under `outputs/entailments/`.
+Skip this step only for archives that the launcher reports as current. Legacy archives are detected by schema version and recomputed.
 
 After rephrased sampling is complete:
 
@@ -219,7 +230,7 @@ After rephrased sampling is complete:
 bash baselines/run_precompute_multilingual.sh
 ```
 
-This mirrors the original `March_ARR_2026/code/snne/run_precompute_multilingual.sh` flow, but uses local BiG-SURE paths. It reads evaluated vanilla outputs and rephrased-sampling outputs, then writes multilingual entailment `.npz` files under:
+The precompute stage validates five rephrases per original question and all four languages before loading mDeBERTa. For each original question and language it compares three low-temperature vanilla answers against 50 stochastic answers (five rephrases times ten samples), recording the paraphrase index of every column. It writes version-2 multilingual entailment archives under:
 
 ```text
 outputs/entailments/

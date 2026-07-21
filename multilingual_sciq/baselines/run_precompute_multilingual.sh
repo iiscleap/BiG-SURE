@@ -16,6 +16,7 @@ K_LOW_T=3
 SUBSAMPLE_HIGH_T=50
 BATCH_SIZE=1024
 MODEL_NAME="MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"
+PYTHON_BIN="${PYTHON_BIN:-python}"
 
 mkdir -p "${ENTAILMENTS_BASE}"
 
@@ -35,12 +36,16 @@ for DATASET in "${DATASETS[@]}"; do
         continue
       fi
 
-      if [[ -f "${ENTAILMENTS_FILE}" ]]; then
+      if [[ -f "${ENTAILMENTS_FILE}" ]] && "${PYTHON_BIN}" "${SCRIPT_DIR}/precompute_entailments_multilingual.py" --check_file "${ENTAILMENTS_FILE}"; then
         echo "[exists] ${ENTAILMENTS_FILE}"
         continue
       fi
 
-      python "${SCRIPT_DIR}/precompute_entailments_multilingual.py" \
+      if [[ -f "${ENTAILMENTS_FILE}" ]]; then
+        echo "[stale] recomputing legacy entailment archive ${ENTAILMENTS_FILE}"
+      fi
+
+      "${PYTHON_BIN}" "${SCRIPT_DIR}/precompute_entailments_multilingual.py" \
         --vanilla_file "${VANILLA_JSON}" \
         --sampling_file "${REPHRASED_JSON}" \
         --output_file "${ENTAILMENTS_FILE}" \

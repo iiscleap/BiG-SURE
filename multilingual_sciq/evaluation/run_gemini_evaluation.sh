@@ -11,6 +11,7 @@ LANGUAGES=(en zh ja fr)
 DATASETS=("sciq")
 MODELS=("apertus" "aya")
 SEEDS=(10 20 30 40 50)
+PYTHON_BIN="${PYTHON_BIN:-python}"
 
 : "${GOOGLE_API_KEY:?Set GOOGLE_API_KEY before running Gemini evaluation.}"
 
@@ -26,7 +27,7 @@ for DATASET in "${DATASETS[@]}"; do
         continue
       fi
 
-      python "${SCRIPT_DIR}/gemini_evaluate_generations.py" \
+      "${PYTHON_BIN}" "${SCRIPT_DIR}/gemini_evaluate_generations.py" \
         --input_json "${INPUT_JSON}" \
         --output_json "${OUTPUT_JSON}" \
         --dataset "${DATASET}" \

@@ -37,7 +37,7 @@ from snne.generate_okvqa_answers import init_vl_model, get_image_path as _get_im
 utils.setup_logger()
 
 
-def load_vqa_perturbed_from_csv(csv_path):
+def load_vqa_perturbed_from_csv(csv_path, image_dir=None):
     """Load VQA examples from a CSV and preserve all columns as metadata.
     
     Args:
@@ -57,6 +57,8 @@ def load_vqa_perturbed_from_csv(csv_path):
         image_path = row.get('image_path')
         if pd.isna(image_path):
             image_path = None
+        elif image_dir:
+            image_path = str(Path(image_dir) / Path(str(image_path)).name)
             
         example = row.to_dict()
         # Ensure critical keys exist
@@ -159,7 +161,7 @@ def main(args):
     logging.info('Finished wandb init for perturbed generator.')
 
     logging.info('Loading perturbed CSV: %s', args.input_csv)
-    dataset = load_vqa_perturbed_from_csv(args.input_csv)
+    dataset = load_vqa_perturbed_from_csv(args.input_csv, image_dir=args.vqa_image_dir)
     logging.info('Loaded %d perturbed examples', len(dataset))
 
     # Build index of already completed IDs

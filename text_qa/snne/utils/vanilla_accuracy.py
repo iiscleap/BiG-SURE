@@ -41,12 +41,24 @@ def load_vanilla_generations(vanilla_run_dir: str, wandb_base_dir: str = DEFAULT
     if not p.is_absolute():
         p = Path(wandb_base_dir) / vanilla_run_dir
     
-    validation_pkl = p if p.is_file() and p.suffix == '.pkl' else p / "files" / "validation_generations.pkl"
+    candidates = [
+        p,
+        p / "validation_generations.pkl",
+        p / "files" / "validation_generations.pkl",
+    ]
+    validation_pkl = next(
+        (candidate for candidate in candidates if candidate.is_file() and candidate.suffix == '.pkl'),
+        candidates[-1],
+    )
     
     if not validation_pkl.exists():
         raise FileNotFoundError(f"Vanilla generations not found: {validation_pkl}")
     
     generations = load_pickle(validation_pkl)
+    if not isinstance(generations, dict) or not generations:
+        raise ValueError(
+            f"Vanilla generations must be a non-empty question-ID dictionary: {validation_pkl}"
+        )
     logger.info(f"Loaded {len(generations)} vanilla samples from {validation_pkl}")
     return generations
 
@@ -65,7 +77,10 @@ def extract_vanilla_accuracy(vanilla_generations: Dict[str, Any]) -> Dict[str, f
     """
     accuracy_dict = {}
     
+    missing_ids = []
     for qid, data in vanilla_generations.items():
+        if not isinstance(data, dict):
+            raise ValueError(f"Vanilla generation {qid!r} must be a dictionary")
         accuracy = None
         
         # Try greedy_answer first (newer format)
@@ -77,7 +92,20 @@ def extract_vanilla_accuracy(vanilla_generations: Dict[str, Any]) -> Dict[str, f
             accuracy = data['most_likely_answer'].get('accuracy')
         
         if accuracy is not None:
-            accuracy_dict[str(qid)] = float(accuracy)
+            accuracy = float(accuracy)
+            if not 0.0 <= accuracy <= 1.0:
+                raise ValueError(
+                    f"Vanilla generation {qid!r} has accuracy outside [0, 1]: {accuracy}"
+                )
+            accuracy_dict[str(qid)] = accuracy
+        else:
+            missing_ids.append(str(qid))
+
+    if missing_ids:
+        raise ValueError(
+            f"Vanilla generations are missing greedy accuracy for {len(missing_ids)} "
+            f"questions; first missing ID: {missing_ids[0]}"
+        )
     
     logger.info(f"Extracted accuracy for {len(accuracy_dict)} questions "
                 f"(mean: {sum(accuracy_dict.values())/len(accuracy_dict):.4f})")

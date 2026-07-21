@@ -1,5 +1,7 @@
 import os
 import logging
+import pickle
+import json
 from collections import Counter, defaultdict
 
 import wandb
@@ -14,17 +16,7 @@ from snne.kle.kernels import heat_kernel, matern_kernel
 from snne.uncertainty.utils.eval_utils import auroc, auarc, aucpr, is_binary_list
 from snne.uncertainty.utils import utils
 from snne.uncertainty.uncertainty_measures.semantic_entropy import logsumexp_by_id
-from snne.uncertainty.utils.compute_utils import (
-    get_parser,
-    setup_wandb,
-    load_gemini_labels,
-    load_vqa_labels,
-    load_precomputed_results,
-    build_example_metadata,
-    get_auroc_label_arrays,
-    per_example_output_path,
-    save_per_example_uncertainties,
-)
+from snne.uncertainty.utils.compute_utils import get_parser, setup_wandb, load_precomputed_results
 from snne.uncertainty.uncertainty_measures.kernel_uncertainty import get_entailment_graph, get_semantic_ids_graph, EntailmentDeberta
 
 
@@ -158,32 +150,27 @@ def all_semantic_entropies_diag(semantic_graph, log_likelihoods_per_sem_id):
     return results
 
 
-def compute_metrics(args, list_responses, list_num_generations, validation_is_true, list_generation_log_likelihoods, list_semantic_ids, entailment_model, list_examples=None):
-    if args.metric == 'vqa_acc':
-        validation_is_true_binary = [1.0 if acc >= args.metric_threshold else 0.0 for acc in validation_is_true]
-        print(f"VQA accuracy binarized at threshold {args.metric_threshold}:")
-        print(f"  {sum(validation_is_true_binary)} correct, {len(validation_is_true_binary) - sum(validation_is_true_binary)} incorrect")
-    elif args.metric == 'vqarad_exact':
-        print(f"VQA-RAD exact match (binary):")
-        print(f"  {sum(validation_is_true)} correct, {len(validation_is_true) - sum(validation_is_true)} incorrect")
-    validation_is_false, is_binary = get_auroc_label_arrays(args, validation_is_true)
+def compute_metrics(list_responses, list_num_generations, validation_is_true, list_generation_log_likelihoods, list_semantic_ids, entailment_model):
+    validation_is_false = [1.0 - is_t for is_t in validation_is_true]
+    is_binary = is_binary_list(validation_is_false)
     entropies = defaultdict(list)
 
     for idx in tqdm(range(len(validation_is_true))):
-        example = list_examples[idx] if list_examples is not None else None
-        responses = list_responses[idx]
-        log_liks_agg = list_generation_log_likelihoods[idx][:list_num_generations[idx]]
+        responses = list_responses[idx][:list_num_generations[idx]]
+        # log_liks_agg = list_generation_log_likelihoods[idx][:list_num_generations[idx]]
         semantic_ids = list_semantic_ids[idx][:list_num_generations[idx]]
-        unique_ids, log_likelihood_per_semantic_id = logsumexp_by_id(
-            semantic_ids, 
-            log_liks_agg, 
-            agg='sum_normalized', 
-            return_unique_ids=True
-        )
+        # unique_ids, log_likelihood_per_semantic_id = logsumexp_by_id(
+        #     semantic_ids, 
+        #     log_liks_agg, 
+        #     agg='sum_normalized', 
+        #     return_unique_ids=True
+        # )
+        unique_ids = np.unique(semantic_ids)
+        
         # Compute KLE
         graph = get_entailment_graph(
             responses, model=entailment_model,
-            example=example, is_weighted=False
+            example=None, is_weighted=False
         )
         
         for k, value in all_graph_entropies(graph):
@@ -191,7 +178,7 @@ def compute_metrics(args, list_responses, list_num_generations, validation_is_tr
             
         weighted_graph = get_entailment_graph(
             responses, model=entailment_model,
-            example=example, is_weighted=True
+            example=None, is_weighted=True
         )
         
         for k, value in all_graph_entropies(weighted_graph):
@@ -199,26 +186,26 @@ def compute_metrics(args, list_responses, list_num_generations, validation_is_tr
 
         weighted_graph_deberta = get_entailment_graph(
             responses, model=entailment_model,
-            example=example, is_weighted=True, weight_strategy="deberta"
+            example=None, is_weighted=True, weight_strategy="deberta"
         )
         for k, value in all_graph_entropies(weighted_graph_deberta):
             entropies[f"weighted_deberta_{k}"].append(value)
 
-        semantic_graph = get_semantic_ids_graph(
-            responses, semantic_ids=semantic_ids, ordered_ids=unique_ids, model=entailment_model,
-            example=example
-        )
-        for k, value in all_semantic_entropies(semantic_graph, log_likelihood_per_semantic_id):
-            entropies[k].append(value)
+        # semantic_graph = get_semantic_ids_graph(
+        #     responses, semantic_ids=semantic_ids, ordered_ids=unique_ids, model=entailment_model,
+        #     example=example
+        # )
+        # for k, value in all_semantic_entropies(semantic_graph, log_likelihood_per_semantic_id):
+        #     entropies[k].append(value)
             
-        for k, value in all_semantic_entropies_diag(semantic_graph, log_likelihood_per_semantic_id):
-            entropies[k].append(value)
+        # for k, value in all_semantic_entropies_diag(semantic_graph, log_likelihood_per_semantic_id):
+        #     entropies[k].append(value)
             
-        for k, value in full_sem_unc_plus_klu(weighted_graph, log_likelihood_per_semantic_id, semantic_ids=semantic_ids, ordered_sem_ids=unique_ids):
-            entropies[k].append(value)
+        # for k, value in full_sem_unc_plus_klu(weighted_graph, log_likelihood_per_semantic_id, semantic_ids=semantic_ids, ordered_sem_ids=unique_ids):
+        #     entropies[k].append(value)
 
-        for k, value in full_sem_unc_plus_klu(weighted_graph_deberta, log_likelihood_per_semantic_id, semantic_ids=semantic_ids, ordered_sem_ids=unique_ids):
-            entropies[f"deberta_{k}"].append(value)
+        # for k, value in full_sem_unc_plus_klu(weighted_graph_deberta, log_likelihood_per_semantic_id, semantic_ids=semantic_ids, ordered_sem_ids=unique_ids):
+        #     entropies[f"deberta_{k}"].append(value)
 
     # Collect AUROC score
     list_auroc = []
@@ -253,7 +240,7 @@ def compute_metrics(args, list_responses, list_num_generations, validation_is_tr
 
     df_metrics = pd.DataFrame(data_metrics)
     
-    return df_metrics, dict(entropies)
+    return df_metrics, entropies
 
 
 # Set up log
@@ -267,11 +254,85 @@ utils.set_all_seeds(args.random_seed)
 # Set up wandb
 setup_wandb(args, prefix='compute_kle')
 
-# Use the same artifact loader as the other baselines. It validates the
-# generation pickle and creates or refreshes semantic IDs when necessary.
+# Load and validate generation/cache artifacts through the shared utility.
 precomputed_results = load_precomputed_results(args)
 validation_generations = precomputed_results['validation_generations']
 list_semantic_ids = precomputed_results['list_semantic_ids']
+
+uncertainty_pkl_path = os.path.join(args.data_path, 'uncertainty_measures.pkl')
+if os.path.exists(uncertainty_pkl_path):
+    with open(uncertainty_pkl_path, 'rb') as infile:
+        results_old = pickle.load(infile)
+else:
+    results_old = {}
+
+if list_semantic_ids is None:
+    logging.info("Semantic IDs not found in uncertainty_measures.pkl. Computing them now...")
+    from snne.uncertainty.uncertainty_measures.semantic_entropy import get_semantic_ids_using_entailment
+    
+    entailment_model_for_ids = EntailmentDeberta(args.entailment_cache_id, args.entailment_cache_only)
+    list_semantic_ids = []
+    for tid in tqdm(validation_generations, desc="Computing Semantic IDs"):
+        example = validation_generations[tid]
+        full_responses = example["responses"]
+        responses = [r[0] for r in full_responses]
+        responses = responses[:args.num_generations]
+        
+        ids = get_semantic_ids_using_entailment(
+            responses, 
+            entailment_model_for_ids,
+            strict_entailment=getattr(args, 'strict_entailment', True),
+            cluster_method=getattr(args, 'cluster_method', 'greedy'),
+            example=example
+        )
+        list_semantic_ids.append(ids)
+    
+    logging.info(f"Computed semantic IDs for {len(list_semantic_ids)} examples.")
+    
+    if getattr(args, 'subsample', None) is None:
+        uncertainty_pkl_path = os.path.join(args.data_path, 'uncertainty_measures.pkl')
+        try:
+            logging.info(f"Saving computed semantic IDs to {uncertainty_pkl_path}")
+            full_results = results_old
+            full_results['semantic_ids'] = list_semantic_ids
+            full_results['schema_version'] = 1
+            full_results['question_ids'] = [str(tid) for tid in validation_generations]
+            with open(uncertainty_pkl_path, 'wb') as outfile:
+                pickle.dump(full_results, outfile)
+            logging.info("Successfully saved semantic IDs to pickle.")
+        except Exception as e:
+            logging.error(f"Failed to save semantic IDs to {uncertainty_pkl_path}: {e}")
+
+    del entailment_model_for_ids
+    import gc
+    gc.collect()
+    torch.cuda.empty_cache()
+
+if getattr(args, 'subsample', None) is not None and args.subsample < args.num_generations:
+    logging.info(f"Subsampling {args.subsample} generations from {args.num_generations}")
+    new_list_semantic_ids = []
+    has_semantic_ids = list_semantic_ids is not None
+    
+    keys = list(validation_generations.keys())
+    for idx, tid in enumerate(keys):
+        example = validation_generations[tid]
+        responses = example['responses']
+        current_len = len(responses)
+        available_len = min(current_len, args.num_generations)
+        
+        if available_len <= args.subsample:
+            indices = np.arange(available_len)
+        else:
+            indices = np.sort(np.random.choice(available_len, args.subsample, replace=False))
+            
+        example['responses'] = [responses[i] for i in indices]
+        
+        if has_semantic_ids:
+            new_list_semantic_ids.append([list_semantic_ids[idx][i] for i in indices])
+            
+    if has_semantic_ids:
+        list_semantic_ids = new_list_semantic_ids
+    args.num_generations = args.subsample
 
 # Load models   
 if args.entailment_model == 'deberta':
@@ -286,7 +347,6 @@ list_context, list_question, list_reference  = [], [], []
 list_sum_token_log_likelihoods, list_avg_token_log_likelihoods = [], []
 list_generation_log_likelihoods = []
 list_responses = []
-list_examples = []
 
 for idx, tid in tqdm(enumerate(validation_generations)):
     example = validation_generations[tid]
@@ -298,7 +358,6 @@ for idx, tid in tqdm(enumerate(validation_generations)):
     if args.condition_on_question and args.entailment_model == 'deberta':
         responses = [f'{question} {r}' for r in responses]
     list_responses.append(responses)
-    list_examples.append(example)
     
     for gen_info in full_responses:
         # Length normalization of generation probability
@@ -312,50 +371,80 @@ for idx, tid in tqdm(enumerate(validation_generations)):
     validation_answerable.append(utils.is_answerable(example))
     list_generation_log_likelihoods.append(example_generation_log_likelihoods)
     
-
 print(Counter(validation_answerable), Counter(validation_is_true))
-
-# If a Gemini per-example JSON is provided, overwrite validation_is_true
-if getattr(args, 'gemini_json', None):
-    new_labels = load_gemini_labels(args, validation_generations)
-    if new_labels is not None and len(new_labels) == len(validation_is_true):
-        validation_is_true = new_labels
-        print(f"Overwrote validation_is_true with Gemini labels; {len(new_labels)} labels loaded.")
-    else:
-        print("Skipping Gemini label overwrite (missing or length mismatch).")
-
-# If a VQA per-example JSON is provided, overwrite validation_is_true
-if getattr(args, 'vqa_json', None):
-    new_labels = load_vqa_labels(args, validation_generations)
-    if new_labels is not None and len(new_labels) == len(validation_is_true):
-        validation_is_true = new_labels
-        print(f"Overwrote validation_is_true with VQA labels; {len(new_labels)} labels loaded.")
-    else:
-        print("Skipping VQA label overwrite (missing or length mismatch).")
 
 # Calculate AUROC and AUARC
 list_num_generations = [args.num_generations for _ in range(len(validation_is_true))]
 print(sum(list_num_generations))
-df_metrics, method_uncertainties = compute_metrics(
-    args,
+df_metrics, entropies = compute_metrics(
     list_responses,
     list_num_generations, 
     validation_is_true, 
     list_generation_log_likelihoods, 
     list_semantic_ids,
-    entailment_model,
-    list_examples=list_examples,
+    entailment_model
 )
 logging.info(df_metrics.head())
 os.makedirs('kle_results', exist_ok=True)
-metrics_csv = f'kle_results/{args.dataset}_{args.model_name}_{args.num_generations}generations{args.suffix}_seed{args.random_seed}.csv'
-df_metrics.to_csv(metrics_csv, index=False)
+df_metrics.to_csv(f'kle_results/{args.dataset}_{args.model_name}_{args.num_generations}generations{args.suffix}_seed{args.random_seed}.csv', index=False)
 
-example_metadata = build_example_metadata(validation_generations, validation_is_true, args)
-save_per_example_uncertainties(
-    per_example_output_path(metrics_csv),
-    example_metadata,
-    method_uncertainties,
-)
+# ─────────────────────────────────────────────────────────────────────────────
+# Save per-sample JSON with uncertainty values
+# ─────────────────────────────────────────────────────────────────────────────
+per_sample_results = {
+    "metadata": {
+        "dataset": args.dataset,
+        "model": args.model_name,
+        "num_generations": args.num_generations,
+    },
+    "samples": {}
+}
+
+# Get sample IDs
+if isinstance(validation_generations, dict):
+    sample_ids = list(validation_generations.keys())
+    # Ensure iteration order matches
+    # In the main loop, we iterated over `validation_generations` directly.
+    # If it's a dict, python 3.7+ preserves insertion order.
+else:
+    # If it's a list (unlikely based on usage keys() elsewhere but possible)
+    # The code used `for idx, tid in enumerate(validation_generations):`
+    # and `example = validation_generations[tid]` so it must be a dict.
+    sample_ids = list(validation_generations.keys())
+
+for idx, tid in enumerate(sample_ids):
+    example = validation_generations[tid]
+    
+    # Extract sample info
+    question = example.get('question', '')
+    most_likely_answer = example.get('most_likely_answer', {})
+    greedy_answer = most_likely_answer.get('response', '')
+    
+    # Get ground truth
+    ground_truth = example.get('answers', [])
+    if not ground_truth:
+        ground_truth = example.get('ground_truth', [])
+    if not ground_truth and 'answer' in example:
+        ground_truth = [example['answer']]
+    
+    per_sample_results["samples"][tid] = {
+        "sample_id": tid,
+        "question": question,
+        "greedy_answer": greedy_answer,
+        "ground_truth": ground_truth,
+        "accuracy": validation_is_true[idx]
+    }
+    
+    # Add entropies
+    for method_name, scores_list in entropies.items():
+        if idx < len(scores_list):
+            per_sample_results["samples"][tid][method_name] = scores_list[idx]
+
+# Save per-sample JSON
+per_sample_json_path = f'kle_results/{args.dataset}_{args.model_name}_{args.num_generations}generations{args.suffix}_seed{args.random_seed}_per_sample.json'
+with open(per_sample_json_path, 'w', encoding='utf-8') as f:
+    json.dump(per_sample_results, f, indent=2, ensure_ascii=False, default=str)
+logging.info(f"Saved per-sample results to: {per_sample_json_path}")
+
 
 wandb.finish()

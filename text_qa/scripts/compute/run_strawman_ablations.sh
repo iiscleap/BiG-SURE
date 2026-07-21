@@ -28,6 +28,7 @@ tail -n +2 "${RUNS_FILE}" | while IFS=$'\t' read -r dataset model seed vanilla_r
     --weighting_scheme entropy_confidence \
     --k_low_t 3 \
     --subsample_high_t 10 \
+    --subsample_seed 2000 \
     --dataset "${dataset}" \
     --model_name "${model}" \
     --metric squad \

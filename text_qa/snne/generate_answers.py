@@ -409,13 +409,7 @@ def main(args):
         print(f"Overall {dataset_split} split accuracy: {accuracy}")
         wandb.log({f"{dataset_split}_accuracy": accuracy})
 
-        # if dataset_split == 'validation':
-            # if args.compute_p_true:
-            #     results_dict['uncertainty_measures'] = {
-            #         'p_false':  [1 - p for p in p_trues],
-            #         'p_false_fixed':  [1 - np.exp(p) for p in p_trues],
-            #     }
-            # utils.save(results_dict, 'uncertainty_measures.pkl')
+        utils.save(results_dict, 'uncertainty_measures.pkl')
 
     utils.save(experiment_details, 'experiment_details.pkl')
     record_wandb_run(

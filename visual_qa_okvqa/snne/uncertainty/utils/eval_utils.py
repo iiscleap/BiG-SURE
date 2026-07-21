@@ -11,6 +11,8 @@ import pandas as pd
 
 
 def normalize(target: List[float]):
+    if len(target) == 0:
+        return np.asarray([], dtype=float)
     min_t, max_t = np.min(target), np.max(target)
     if np.isclose(min_t, max_t):
         min_t -= 1
@@ -20,6 +22,10 @@ def normalize(target: List[float]):
 
 
 def skip_nans(target, estimator):
+    if len(target) != len(estimator):
+        raise ValueError(
+            f'target and estimator lengths differ: {len(target)} != {len(estimator)}'
+        )
     newt, newe = [], []
     count_nan = 0
     
@@ -34,7 +40,7 @@ def skip_nans(target, estimator):
 
 
 def is_binary_list(lst):
-    return all(item in [0, 1] for item in lst)
+    return len(lst) > 0 and all(item in [0, 1] for item in lst)
 
 
 def bootstrap(function, rng, n_resamples=1000):
@@ -52,6 +58,8 @@ def bootstrap(function, rng, n_resamples=1000):
 
 def auroc(y_true, y_score):
     y_true, y_score = skip_nans(y_true, y_score)
+    if len(y_true) == 0 or len(np.unique(y_true)) < 2:
+        return np.nan
     fpr, tpr, thresholds = metrics.roc_curve(y_true, y_score)
     del thresholds
     return metrics.auc(fpr, tpr)
@@ -60,6 +68,8 @@ def auroc(y_true, y_score):
 def auarc(y_score, y_true):
     # area under the rejection-VALUE curve, where VALUE could be accuracy, etc.
     y_true, y_score = skip_nans(y_true, y_score)
+    if len(y_true) < 2:
+        return np.nan
     df = pd.DataFrame({"u": y_score, 'a': y_true}).sort_values('u', ascending=True)
     df['amean'] = df['a'].expanding().mean()
     return metrics.auc(np.linspace(0,1,len(df)), df['amean'])
@@ -80,6 +90,8 @@ def aucpr(y_score, y_true):
                 Higher values indicate better uncertainty estimations.
         """
     y_true, y_score = skip_nans(y_true, y_score)
+    if len(y_true) == 0:
+        return np.nan
     y_true = normalize(y_true)
     ue = np.array(y_score)
     num_obs = len(ue)
@@ -97,6 +109,10 @@ def aucpr(y_score, y_true):
 
 
 def accuracy_at_quantile(accuracies, uncertainties, quantile):
+    accuracies = np.asarray(accuracies)
+    uncertainties = np.asarray(uncertainties)
+    if len(accuracies) == 0:
+        return np.nan
     cutoff = np.quantile(uncertainties, quantile)
     select = uncertainties <= cutoff
     return np.mean(accuracies[select])

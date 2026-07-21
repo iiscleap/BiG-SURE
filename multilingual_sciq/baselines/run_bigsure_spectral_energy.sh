@@ -12,6 +12,7 @@ RESULTS_BASE="${TASK_ROOT}/results/spectral_energy"
 DATASETS=("sciq")
 MODELS=("apertus" "aya")
 SEEDS=(10 20 30 40 50)
+PYTHON_BIN="${PYTHON_BIN:-python}"
 
 mkdir -p "${ENTAILMENTS_BASE}" "${RESULTS_BASE}"
 
@@ -33,7 +34,7 @@ for DATASET in "${DATASETS[@]}"; do
         continue
       fi
 
-      python "${SCRIPT_DIR}/compute_spectral_energy_multilingual.py" \
+      "${PYTHON_BIN}" "${SCRIPT_DIR}/compute_spectral_energy_multilingual.py" \
         --vanilla_file "${VANILLA_JSON}" \
         --sampling_file "${REPHRASED_JSON}" \
         --entailments_file "${ENTAILMENTS_FILE}" \

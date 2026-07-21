@@ -76,12 +76,13 @@ def get_parser():
 
 
 def setup_wandb(args, prefix='compute'):
-    user = os.environ['USER']
+    user = os.environ.get('USER', 'user')
     scratch_dir = os.getenv('SCRATCH_DIR', '.')
-    wandb_dir = f'{scratch_dir}/{user}/uncertainty'
+    wandb_dir = os.getenv('WANDB_DIR', f'{scratch_dir}/{user}/uncertainty')
+    os.makedirs(wandb_dir, exist_ok=True)
     slurm_jobid = os.getenv('SLURM_JOB_ID', None)
-    project = "snne"
-    entity = os.getenv('WANDB_SEM_UNC_ENTITY', None)
+    project = os.getenv('WANDB_PROJECT', 'bigsure-text-qa')
+    entity = os.getenv('WANDB_ENTITY') or os.getenv('WANDB_SEM_UNC_ENTITY')
     host_name = os.uname()[1]
     run_name = f"{prefix}_{args.model_name}_{args.dataset}_{args.num_generations}generations{args.suffix}_seed{args.random_seed}_{host_name}"
     config = {
@@ -106,11 +107,58 @@ def load_precomputed_results(args):
     with open(f"{args.data_path}/validation_generations.pkl", 'rb') as infile:
         validation_generations = pickle.load(infile)
 
+    if not isinstance(validation_generations, dict) or not validation_generations:
+        raise ValueError(
+            'validation_generations.pkl must be a non-empty dictionary keyed by question ID.'
+        )
+    question_ids = [str(qid) for qid in validation_generations]
+    for qid, example in validation_generations.items():
+        if not isinstance(example, dict):
+            raise ValueError(f'Generation entry {qid!r} must be a dictionary.')
+        missing = {'question', 'most_likely_answer', 'responses'} - set(example)
+        if missing:
+            raise ValueError(f'Generation entry {qid!r} is missing keys: {sorted(missing)}')
+        greedy = example['most_likely_answer']
+        if not isinstance(greedy, dict) or not isinstance(greedy.get('response'), str):
+            raise ValueError(f'Generation entry {qid!r} has an invalid greedy answer.')
+        if greedy.get('accuracy') is None:
+            raise ValueError(f'Generation entry {qid!r} has no greedy accuracy label.')
+        if not greedy.get('token_log_likelihoods'):
+            raise ValueError(f'Generation entry {qid!r} has no greedy token log-likelihoods.')
+        if len(example['responses']) != args.num_generations:
+            raise ValueError(
+                f'Generation entry {qid!r} has {len(example["responses"])} stochastic '
+                f'responses; exactly {args.num_generations} are required.'
+            )
+        low_responses = example.get('low_temp_answers')
+        if not isinstance(low_responses, list) or len(low_responses) != 3:
+            raise ValueError(f'Generation entry {qid!r} must contain exactly 3 low-T responses.')
+        for response_idx, response in enumerate(low_responses):
+            if (not isinstance(response, (tuple, list)) or len(response) < 2
+                    or not isinstance(response[0], str) or not response[0].strip()
+                    or response[1] is None or len(response[1]) == 0):
+                raise ValueError(f'Generation entry {qid!r} has invalid low-T response {response_idx}.')
+        for response_idx, response in enumerate(example['responses'][:args.num_generations]):
+            if not isinstance(response, (tuple, list)) or len(response) < 2:
+                raise ValueError(
+                    f'Generation entry {qid!r} response {response_idx} must contain '
+                    '(text, token_log_likelihoods, ...).'
+                )
+            if not isinstance(response[0], str) or not response[0].strip():
+                raise ValueError(f'Generation entry {qid!r} response {response_idx} is empty.')
+            if response[1] is None or len(response[1]) == 0:
+                raise ValueError(
+                    f'Generation entry {qid!r} response {response_idx} has no token '
+                    'log-likelihoods.'
+                )
+
     results_old = {}
     uncertainty_pkl_path = f"{args.data_path}/uncertainty_measures.pkl"
     if os.path.isfile(uncertainty_pkl_path):
         with open(uncertainty_pkl_path, 'rb') as infile:
             results_old = pickle.load(infile)
+        if not isinstance(results_old, dict):
+            results_old = {}
 
     save_embedding_path = f'{args.data_path}/embedding_and_similarity.pkl'
     save_dict = None
@@ -118,6 +166,11 @@ def load_precomputed_results(args):
     if os.path.isfile(save_embedding_path):
         with open(save_embedding_path, 'rb') as infile:
             save_dict = pickle.load(infile)
+        if not isinstance(save_dict, dict) or [
+                str(qid) for qid in save_dict.get('question_ids', [])
+        ] != question_ids:
+            print('Cached similarities do not match validation_generations.pkl; recomputing.')
+            save_dict = None
             
     if save_dict is None:
         # save_dict["entail"] = {}
@@ -157,7 +210,13 @@ def load_precomputed_results(args):
 
     print(f"Save dict exist is {save_dict_exist}. Embedding exist is {embedding_exist}. Lexsim exist is {lexsim_exist}. Jaccardlex exist is {jaccardlex_exist}. LUQ sim exist is {luq_sim_exist}. SAR exist is {sar_exist}. Eigenscore exist is {eigenscore_exist}")
         
-    if 'semantic_ids' in results_old:
+    semantic_ids_aligned = (
+        [str(qid) for qid in results_old.get('question_ids', [])] == question_ids
+        and isinstance(results_old.get('semantic_ids'), list)
+        and len(results_old['semantic_ids']) == len(question_ids)
+        and all(len(ids) >= args.num_generations for ids in results_old['semantic_ids'])
+    )
+    if semantic_ids_aligned:
         # Check if list_semantic_ids needs slicing
         list_semantic_ids = results_old['semantic_ids']
         if list_semantic_ids is not None and isinstance(list_semantic_ids, list) and len(list_semantic_ids) > 0:
@@ -165,6 +224,11 @@ def load_precomputed_results(args):
                  list_semantic_ids = slice_1d(list_semantic_ids, args.num_generations)
     else:
         list_semantic_ids = None
+
+    if save_dict is None:
+        save_dict = {}
+    save_dict['schema_version'] = 1
+    save_dict['question_ids'] = question_ids
     
     precomputed_results = {
         'validation_generations': validation_generations,
@@ -482,8 +546,7 @@ def save_or_load_results(args, result_dict, save_dict, save_embedding_path, save
     
     if 'luq' in save_list:
         print("Save LUQ similarity matrix.")
-        if 'entail' not in save_dict:
-            save_dict['entail'] = {}
+        save_dict.setdefault('entail', {})
         save_dict['entail']['list_generation_luq_similarity'] = result_dict['list_generation_luq_similarity']
         save_dict['entail']['list_generation_with_question_luq_similarity'] = result_dict['list_generation_with_question_luq_similarity']
     elif 'luq' in load_list:
@@ -565,16 +628,27 @@ def load_gemini_labels(args, validation_generations):
         with open(args.gemini_json, 'r') as f:
             gemini_json = json.load(f)
         gemini_labels = gemini_json.get('per_example', gemini_json)
+        expected_ids = (
+            [str(tid) for tid in validation_generations]
+            if isinstance(validation_generations, dict)
+            else [str(example.get('id', example.get('question_id', '')))
+                  for example in validation_generations]
+        )
+        missing_ids = [ex_id for ex_id in expected_ids if ex_id not in gemini_labels]
+        if missing_ids:
+            raise ValueError(
+                f'{len(missing_ids)} generated question IDs are absent from the Gemini JSON; '
+                f'first missing ID: {missing_ids[0]}'
+            )
         new_validation_is_true = []
         if isinstance(validation_generations, dict):
             for tid in validation_generations:
                 ex_id = str(tid)
-                new_validation_is_true.append(float(gemini_labels.get(ex_id, 0)))
+                new_validation_is_true.append(float(gemini_labels[ex_id]))
         else:
             for example in validation_generations:
-                ex_id = str(example.get('id')) if 'id' in example else str(example.get('question', ''))
-                new_validation_is_true.append(float(gemini_labels.get(ex_id, 0)))
+                ex_id = str(example.get('id', example.get('question_id', '')))
+                new_validation_is_true.append(float(gemini_labels[ex_id]))
         return new_validation_is_true
     except Exception as e:
-        print(f"Error loading gemini_json {args.gemini_json}: {e}")
-        return None
+        raise ValueError(f"Invalid gemini_json {args.gemini_json}: {e}") from e

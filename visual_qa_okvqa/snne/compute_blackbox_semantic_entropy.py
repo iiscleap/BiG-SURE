@@ -15,11 +15,11 @@ Usage:
         --dataset okvqa \\
         --num_generations 10 \\
         --model_name llava-v1.6-mistral-7b-hf \\
-        --data_path sriramg/uncertainty/wandb/run-xxx/files \\
+        --data_path outputs/responses/vanilla/<model>_seed<seed> \\
         --metric vqa_acc \\
         --metric_threshold 0.5
 
-The script expects the wandb run directory to already contain:
+The script expects the run directory to contain:
   - validation_generations.pkl  (model outputs, with most_likely_answer['accuracy'])
   - uncertainty_measures.pkl    (must contain 'semantic_ids' key; if missing they
                                   are recomputed with DeBERTa entailment)

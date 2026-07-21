@@ -415,6 +415,12 @@ def subsample_answers(answers, k, seed=None):
 def load_results_npz(filepath):
     """Load precomputed entailment results from compressed numpy archive."""
     data = np.load(filepath, allow_pickle=True)
+    schema_version = int(data['schema_version'][0]) if 'schema_version' in data else 1
+    if schema_version != 2:
+        raise ValueError(
+            f"Unsupported Text QA entailment schema version {schema_version}. "
+            "Rerun run_precompute_entailments.sh to create a version 2 archive."
+        )
     question_ids = data['question_ids'].tolist()
     
     results = {}
@@ -425,6 +431,7 @@ def load_results_npz(filepath):
             'probs_bwd': data[f"{prefix}probs_bwd"],
             'low_texts': data[f"{prefix}low_texts"].tolist(),
             'high_texts': data[f"{prefix}high_texts"].tolist(),
+            'paraphrase_indices': data[f"{prefix}paraphrase_indices"].tolist(),
             'm': int(data[f"{prefix}m"][0]),
             'n': int(data[f"{prefix}n"][0])
         }
@@ -643,14 +650,22 @@ def compute_weighted_spectral_energy_with_precomputed(generations, precomputed_e
         logger.info(f"Subsampling to {subsample_high_t} high-T from precomputed")
     if self_similarity:
         logger.info("Self-similarity mode: square matrix, uniform column weights (low_low or high_high)")
+
+    generation_ids = set(by_original)
+    entailment_ids = set(precomputed_entailments)
+    if generation_ids != entailment_ids:
+        raise ValueError(
+            "Rephrased generations and entailment archive contain different question IDs. "
+            f"Missing entailments: {sorted(generation_ids - entailment_ids)[:5]}; "
+            f"unexpected entailments: {sorted(entailment_ids - generation_ids)[:5]}."
+        )
+    if accuracy_dict is not None and set(map(str, accuracy_dict)) != entailment_ids:
+        raise ValueError("Vanilla accuracy labels and entailment archive contain different question IDs.")
     
     graph_results = {}
     
     for orig_id in tqdm(sorted(by_original.keys()), desc="Processing"):
         precomp = precomputed_entailments.get(str(orig_id))
-        if precomp is None:
-            continue
-        
         W_full = probs_to_weights_matrix(
             precomp['probs_fwd'],
             precomp['probs_bwd'],
@@ -665,12 +680,28 @@ def compute_weighted_spectral_energy_with_precomputed(generations, precomputed_e
             weights = np.ones(W.shape[1])
         else:
             rephrasings = by_original[orig_id]
-            # Get paraphrase indices for high-temp answers
-            all_high_t, paraphrase_indices = extract_all_high_t_with_paraphrase_indices(rephrasings)
+            generated_high_t, generated_paraphrase_indices = extract_all_high_t_with_paraphrase_indices(rephrasings)
+            all_high_t = precomp['high_texts']
+            paraphrase_indices = precomp['paraphrase_indices']
 
             m_precomputed, n_precomputed = W_full.shape
+            if precomp['m'] != m_precomputed or precomp['n'] != n_precomputed:
+                raise ValueError(f"Entailment dimensions are inconsistent for question {orig_id!r}.")
+            if len(all_high_t) != n_precomputed or len(paraphrase_indices) != n_precomputed:
+                raise ValueError(f"Entailment response metadata is inconsistent for question {orig_id!r}.")
+            if generated_high_t[:n_precomputed] != all_high_t:
+                raise ValueError(
+                    f"Rephrased responses no longer match the entailment archive for question {orig_id!r}. "
+                    "Rerun entailment precompute."
+                )
+            if generated_paraphrase_indices[:n_precomputed] != paraphrase_indices:
+                raise ValueError(f"Rephrasing order no longer matches for question {orig_id!r}.")
             K_low = int(k_low_t) if k_low_t else m_precomputed
             K_high = int(subsample_high_t) if subsample_high_t else n_precomputed
+            if K_low <= 0 or K_low > m_precomputed:
+                raise ValueError(f"k_low_t must be in [1, {m_precomputed}], got {K_low}.")
+            if K_high <= 0 or K_high > n_precomputed:
+                raise ValueError(f"subsample_high_t must be in [1, {n_precomputed}], got {K_high}.")
 
             # Subsample low_t (rows) deterministic first K_low
             if K_low < m_precomputed and K_low > 0:
@@ -680,8 +711,8 @@ def compute_weighted_spectral_energy_with_precomputed(generations, precomputed_e
 
             # Subsample high_t (cols) randomly
             if K_high < n_precomputed and K_high > 0:
-                rnd = random.Random(2000)
-                if same_input_probes and len(paraphrase_indices) >= n_precomputed:
+                rnd = random.Random(subsample_seed)
+                if same_input_probes:
                     indices_by_para = defaultdict(list)
                     for i, p_idx in enumerate(paraphrase_indices[:n_precomputed]):
                         indices_by_para[p_idx].append(i)
@@ -702,26 +733,12 @@ def compute_weighted_spectral_energy_with_precomputed(generations, precomputed_e
                 else:
                     sampled_indices = sorted(rnd.sample(range(n_precomputed), K_high))
                 W = W_current[:, sampled_indices]
-                # Subsample high texts and indices
-                if len(all_high_t) >= n_precomputed:
-                    high_texts_for_weight = [all_high_t[i] for i in sampled_indices]
-                    para_indices_sampled = [paraphrase_indices[i] for i in sampled_indices]
-                else:
-                    # Fallback: subsample precomp['high_texts'] with the same indices
-                    precomp_high = precomp.get('high_texts', [])
-                    if len(precomp_high) >= n_precomputed:
-                        high_texts_for_weight = [precomp_high[i] for i in sampled_indices]
-                    else:
-                        high_texts_for_weight = precomp_high[:K_high] if len(precomp_high) >= K_high else precomp_high
-                    para_indices_sampled = [0] * len(high_texts_for_weight)
+                high_texts_for_weight = [all_high_t[i] for i in sampled_indices]
+                para_indices_sampled = [paraphrase_indices[i] for i in sampled_indices]
             else:
                 W = W_current
-                if len(all_high_t) >= n_precomputed:
-                    high_texts_for_weight = all_high_t
-                    para_indices_sampled = paraphrase_indices
-                else:
-                    high_texts_for_weight = precomp.get('high_texts', [])
-                    para_indices_sampled = [0] * len(high_texts_for_weight)
+                high_texts_for_weight = all_high_t
+                para_indices_sampled = paraphrase_indices
 
             # Compute paraphrase-aware column weights
             weights = compute_paraphrase_weights(
@@ -729,9 +746,8 @@ def compute_weighted_spectral_energy_with_precomputed(generations, precomputed_e
                 weighting_scheme, divergence_measure, sim_threshold
             )
 
-            # Ensure weights match W columns
             if len(weights) != W.shape[1]:
-                weights = np.ones(W.shape[1])
+                raise ValueError(f"Column weights do not match entailment columns for question {orig_id!r}.")
 
         result = compute_weighted_spectral_energy_from_W(W, weights)
         if result is None:

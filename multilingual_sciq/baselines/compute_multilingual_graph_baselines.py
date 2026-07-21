@@ -51,6 +51,7 @@ from multilingual_utils import (
     calculate_prem_accuracy,
     MultilingualEntailmentDeberta,
     get_semantic_ids_using_entailment,
+    validate_generation_pair,
 )
 
 logging.basicConfig(
@@ -298,6 +299,11 @@ def main():
     available_languages = get_languages(vanilla_data)
     languages = args.languages if args.languages else available_languages
     logger.info(f"Languages to process: {languages}")
+    validate_generation_pair(
+        vanilla_data, sampling_data, languages,
+        num_sampling_outputs=args.num_generations,
+        require_accuracy=args.metric in ('claude', 'gemini')
+    )
 
     nli_model = MultilingualEntailmentDeberta()
     os.makedirs(args.output_dir, exist_ok=True)

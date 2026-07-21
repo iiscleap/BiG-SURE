@@ -19,19 +19,28 @@ def quantile_power_normalize(x, gamma=0.5, clip=(1, 99), return_confidence=True)
         Normalized values in [0, 1] range
     """
     x = np.asarray(x, dtype=float)
+    if x.size == 0:
+        return x
+
+    finite = np.isfinite(x)
+    if not finite.any():
+        return np.full_like(x, np.nan, dtype=float)
+    finite_values = x[finite]
     epsilon = 1e-9
     
     # Inversion: convert uncertainty to confidence-like score for ranking
     if return_confidence:
-        x = 1.0 / (x + epsilon)
+        finite_values = 1.0 / (finite_values + epsilon)
     
-    if clip is not None and len(x) > 0:
-        lo, hi = np.percentile(x, clip)
-        x = np.clip(x, lo, hi)
+    if clip is not None:
+        lo, hi = np.percentile(finite_values, clip)
+        finite_values = np.clip(finite_values, lo, hi)
     
     # Get ranks (ties broken arbitrarily)
-    ranks = np.argsort(np.argsort(x)) + 1
+    ranks = np.argsort(np.argsort(finite_values)) + 1
     
     # Convert to uniform [0, 1] with power transform
-    u = ranks / (len(x) + 1.0)
-    return u ** gamma
+    u = ranks / (len(finite_values) + 1.0)
+    result = np.full_like(x, np.nan, dtype=float)
+    result[finite] = u ** gamma
+    return result

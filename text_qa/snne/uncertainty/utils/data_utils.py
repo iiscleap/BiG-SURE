@@ -7,17 +7,18 @@ import datasets
 
 
 def sample_dataset(ds, num_samples, seed):
+    if num_samples is None or num_samples >= len(ds):
+        return ds
+    if num_samples < 0:
+        raise ValueError('num_samples must be non-negative')
     print(f"Sample {num_samples} examples from {len(ds)} examples with seed = {seed}")
-    random.seed(seed)
-    indices = random.sample(range(len(ds)), num_samples)
+    indices = random.Random(seed).sample(range(len(ds)), num_samples)
     
     return ds.select(indices)
 
 
 def load_ds(dataset_name, seed, add_options=None, train_num_samples=None, val_num_samples=None):
     """Load dataset."""
-    user = os.environ['USER']
-
     train_dataset, validation_dataset = None, None
     if dataset_name == "squad":
         dataset = datasets.load_dataset("squad_v2")
@@ -140,7 +141,7 @@ def load_ds(dataset_name, seed, add_options=None, train_num_samples=None, val_nu
         train_dataset = [reformat(d) for d in train_dataset]
         validation_dataset = [reformat(d) for d in validation_dataset]
     
-    elif dataset_name in "de-en":
+    elif dataset_name == "de-en":
         dataset = datasets.load_dataset("wmt14", dataset_name, trust_remote_code=True)
         # Because dataset is large, sample before formatting
         train_dataset = sample_dataset(
@@ -163,7 +164,7 @@ def load_ds(dataset_name, seed, add_options=None, train_num_samples=None, val_nu
         train_dataset = [reformat(d) for d in train_dataset]
         validation_dataset = [reformat(d) for d in validation_dataset]
     
-    elif dataset_name in "fr-en":
+    elif dataset_name == "fr-en":
         dataset = datasets.load_dataset("wmt14", dataset_name, trust_remote_code=True)
         # Because dataset is large, sample before formatting
         train_dataset = sample_dataset(

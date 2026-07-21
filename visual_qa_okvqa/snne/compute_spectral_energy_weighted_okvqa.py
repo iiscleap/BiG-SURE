@@ -262,6 +262,12 @@ def load_accuracy_json(accuracy_path):
 def load_results_npz(filepath):
     """Load precomputed entailment results from compressed numpy archive."""
     data = np.load(filepath, allow_pickle=True)
+    schema_version = int(data['schema_version'][0]) if 'schema_version' in data.files else 1
+    if schema_version != 2:
+        raise ValueError(
+            f'Unsupported OKVQA entailment schema version {schema_version}. '
+            'Rerun baselines/run_precompute_okvqa_entailments.sh.'
+        )
     
     # Extract question IDs from keys
     question_ids = set()
@@ -284,12 +290,7 @@ def load_results_npz(filepath):
                 'm': int(data[f"{prefix}m"][0]),
                 'n': int(data[f"{prefix}n"][0])
             }
-            # Load paraphrase indices if available
-            if f"{prefix}paraphrase_indices" in data.files:
-                results[qid]['paraphrase_indices'] = data[f"{prefix}paraphrase_indices"].tolist()
-            else:
-                # Fallback: no paraphrase info, all same group
-                results[qid]['paraphrase_indices'] = [0] * results[qid]['n']
+            results[qid]['paraphrase_indices'] = data[f"{prefix}paraphrase_indices"].tolist()
             if f"{prefix}accuracy" in data.files:
                 results[qid]['accuracy'] = float(data[f"{prefix}accuracy"][0])
         except KeyError as e:
@@ -514,7 +515,7 @@ def compute_weighted_spectral_energy_with_precomputed(
         
         # Get high-temp texts and paraphrase indices for weight computation
         all_high_t = precomp['high_texts']
-        paraphrase_indices = precomp.get('paraphrase_indices', [0] * len(all_high_t))
+        paraphrase_indices = precomp['paraphrase_indices']
         
         W_full = probs_to_weights_matrix(
             precomp['probs_fwd'],
@@ -525,6 +526,10 @@ def compute_weighted_spectral_energy_with_precomputed(
 
         n_precomputed = W_full.shape[1]
         K_high = int(subsample_high_t) if subsample_high_t else n_precomputed
+        if len(all_high_t) != n_precomputed or len(paraphrase_indices) != n_precomputed:
+            raise ValueError(f'Entailment metadata does not match matrix columns for question {qid}.')
+        if K_high <= 0 or K_high > n_precomputed:
+            raise ValueError(f'subsample_high_t must be in [1, {n_precomputed}], got {K_high}.')
         
         if K_high < n_precomputed and K_high > 0:
             rnd = random.Random(subsample_seed)
@@ -534,8 +539,8 @@ def compute_weighted_spectral_energy_with_precomputed(
             
             # Subsample W, high_texts, and paraphrase_indices
             W = W_full[:, sampled_indices]
-            high_texts = [all_high_t[i] for i in sampled_indices] if len(all_high_t) >= n_precomputed else all_high_t
-            para_indices_sampled = [paraphrase_indices[i] for i in sampled_indices] if len(paraphrase_indices) >= n_precomputed else [0] * K_high
+            high_texts = [all_high_t[i] for i in sampled_indices]
+            para_indices_sampled = [paraphrase_indices[i] for i in sampled_indices]
         else:
             W = W_full
             high_texts = all_high_t
@@ -553,7 +558,7 @@ def compute_weighted_spectral_energy_with_precomputed(
         
         # Ensure weights match W columns
         if len(weights) != W.shape[1]:
-            weights = np.ones(W.shape[1])
+            raise ValueError(f'Column weights do not match matrix columns for question {qid}.')
         
         result = compute_weighted_spectral_energy_from_W(W, weights)
         if result is None:
@@ -609,11 +614,15 @@ def compute_weighted_spectral_energy_with_similarity(
         
         low_texts = precomp['low_texts']
         all_high_t = precomp['high_texts']
-        paraphrase_indices = precomp.get('paraphrase_indices', [0] * len(all_high_t))
+        paraphrase_indices = precomp['paraphrase_indices']
         
         # Subsample high texts
         n_high = len(all_high_t)
         K_high = int(subsample_high_t) if subsample_high_t else n_high
+        if len(paraphrase_indices) != n_high:
+            raise ValueError(f'Paraphrase-index count mismatch for question {qid}.')
+        if K_high <= 0 or K_high > n_high:
+            raise ValueError(f'subsample_high_t must be in [1, {n_high}], got {K_high}.')
         
         if K_high < n_high and K_high > 0:
             rnd = random.Random(subsample_seed)
@@ -627,7 +636,7 @@ def compute_weighted_spectral_energy_with_similarity(
             para_indices_sampled = paraphrase_indices
         
         if len(low_texts) == 0 or len(high_texts) == 0:
-            continue
+            raise ValueError(f'Question {qid} has no usable low/high responses.')
         
         # Compute similarity matrix
         W = compute_similarity_matrix(low_texts, high_texts, similarity)
@@ -683,6 +692,45 @@ def load_vanilla_example_metadata(vanilla_pkl_path):
             'answer': example.get('most_likely_answer', {}).get('response', ''),
         }
     return metadata
+
+
+def validate_bigsure_artifacts(vanilla_pkl_path, entailments, accuracy_dict):
+    """Ensure all BiG-SURE inputs describe the same complete question set."""
+    if not vanilla_pkl_path:
+        raise ValueError('--vanilla_pkl is required for artifact validation')
+    with open(vanilla_pkl_path, 'rb') as infile:
+        vanilla = pickle.load(infile)
+    if not isinstance(vanilla, dict) or not vanilla:
+        raise ValueError('Vanilla pickle must contain a non-empty question-ID dictionary.')
+
+    vanilla_ids = {str(qid) for qid in vanilla}
+    entailment_ids = {str(qid) for qid in entailments}
+    accuracy_ids = set(accuracy_dict or {})
+    if vanilla_ids != entailment_ids or vanilla_ids != accuracy_ids:
+        raise ValueError(
+            'Vanilla pickle, entailment archive, and accuracy JSON question IDs do '
+            f'not match: vanilla={len(vanilla_ids)}, entailments={len(entailment_ids)}, '
+            f'accuracy={len(accuracy_ids)}.'
+        )
+
+    for qid, example in vanilla.items():
+        low_outputs = example.get('low_temp_responses', [])
+        if len(low_outputs) != 3:
+            raise ValueError(f'Vanilla question {qid} must have exactly 3 low-T responses.')
+        entailment = entailments[str(qid)]
+        expected_shape = (entailment['m'], entailment['n'], 3)
+        if entailment['probs_fwd'].shape != expected_shape or entailment['probs_bwd'].shape != expected_shape:
+            raise ValueError(f'Entailment probability shape mismatch for question {qid}.')
+        if len(entailment.get('paraphrase_indices', [])) != entailment['n']:
+            raise ValueError(f'Paraphrase-index count mismatch for question {qid}.')
+        low_texts = [response[0] for response in low_outputs]
+        if low_texts != entailment['low_texts']:
+            raise ValueError(
+                f'Vanilla low-T responses no longer match entailments for question {qid}; '
+                'rerun precompute.'
+            )
+        if len(entailment['high_texts']) != entailment['n']:
+            raise ValueError(f'High-T response count mismatch for question {qid}.')
 
 
 def build_spectral_method_name(similarity, score_mode, combine, weighting_scheme):
@@ -855,6 +903,8 @@ def main():
             logger.info(f"Loaded {len(accuracy_dict)} accuracy labels from JSON file")
         else:
             logger.warning(f"Accuracy file not found: {accuracy_path}")
+
+    validate_bigsure_artifacts(args.vanilla_pkl, precomputed_entailments, accuracy_dict)
     
     # Compute weighted spectral energy based on similarity measure
     if args.similarity == "deberta":

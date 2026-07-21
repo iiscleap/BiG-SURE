@@ -77,6 +77,102 @@ def get_languages(data: List[Dict]) -> List[str]:
     return LANGUAGES
 
 
+def validate_generation_pair(
+    vanilla_data: List[Dict],
+    sampling_data: List[Dict],
+    languages: List[str],
+    num_vanilla_outputs: int = 4,
+    num_sampling_outputs: int = 10,
+    require_accuracy: bool = False,
+) -> None:
+    """Validate the aligned vanilla/sampling contract used by all baselines."""
+    if not vanilla_data or not sampling_data:
+        raise ValueError('Vanilla and sampling generation files must both be non-empty.')
+
+    if any(item.get('question_id') is None for item in vanilla_data + sampling_data):
+        raise ValueError('Every generation record must contain a question_id.')
+    vanilla_ids = [str(item['question_id']) for item in vanilla_data]
+    sampling_ids = [str(item['question_id']) for item in sampling_data]
+    if len(set(vanilla_ids)) != len(vanilla_ids):
+        raise ValueError('Vanilla generation file contains duplicate question IDs.')
+    if len(set(sampling_ids)) != len(sampling_ids):
+        raise ValueError('Sampling generation file contains duplicate question IDs.')
+    if vanilla_ids != sampling_ids:
+        missing_sampling = sorted(set(vanilla_ids) - set(sampling_ids))
+        missing_vanilla = sorted(set(sampling_ids) - set(vanilla_ids))
+        raise ValueError(
+            'Vanilla and sampling records are not aligned in question-ID order. '
+            f'Missing from sampling: {missing_sampling[:3]}; '
+            f'missing from vanilla: {missing_vanilla[:3]}.'
+        )
+
+    empty_outputs = 0
+    for mode, records, required_outputs in (
+        ('vanilla', vanilla_data, num_vanilla_outputs),
+        ('sampling', sampling_data, num_sampling_outputs),
+    ):
+        for item in records:
+            qid = str(item['question_id'])
+            for field in ('question', 'answer', 'output', 'probs'):
+                if not isinstance(item.get(field), dict):
+                    raise ValueError(f'{mode} question {qid} has invalid or missing {field}.')
+            for language in languages:
+                outputs = item['output'].get(language)
+                probs = item['probs'].get(language)
+                if not isinstance(outputs, list) or len(outputs) != required_outputs:
+                    raise ValueError(
+                        f'{mode} question {qid}/{language} has '
+                        f'{len(outputs) if isinstance(outputs, list) else 0} outputs; '
+                        f'expected {required_outputs}.'
+                    )
+                if not all(isinstance(output, str) for output in outputs):
+                    raise ValueError(f'{mode} question {qid}/{language} contains a non-string output.')
+                empty_outputs += sum(not output.strip() for output in outputs)
+                if not isinstance(probs, list) or len(probs) != required_outputs:
+                    raise ValueError(
+                        f'{mode} question {qid}/{language} probability count does not '
+                        f'match its {required_outputs} outputs.'
+                    )
+                try:
+                    numeric_probs = np.asarray(probs, dtype=float)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(
+                        f'{mode} question {qid}/{language} contains a non-numeric probability.'
+                    ) from exc
+                if (not np.isfinite(numeric_probs).all()
+                        or (numeric_probs < 0).any() or (numeric_probs > 1).any()):
+                    raise ValueError(
+                        f'{mode} question {qid}/{language} probabilities must be finite '
+                        'and in [0, 1].'
+                    )
+            if mode == 'vanilla' and require_accuracy:
+                accuracy = item.get('accuracy')
+                missing_languages = [lang for lang in languages if lang not in (accuracy or {})]
+                if missing_languages:
+                    raise ValueError(
+                        f'Vanilla question {qid} is missing accuracy labels for '
+                        f'{missing_languages}.'
+                    )
+                try:
+                    accuracy_values = np.asarray(
+                        [accuracy[language] for language in languages], dtype=float
+                    )
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(
+                        f'Vanilla question {qid} contains a non-numeric accuracy label.'
+                    ) from exc
+                if (not np.isfinite(accuracy_values).all()
+                        or (accuracy_values < 0).any() or (accuracy_values > 1).any()):
+                    raise ValueError(
+                        f'Vanilla question {qid} accuracy labels must be in [0, 1].'
+                    )
+    if empty_outputs:
+        logger.warning(
+            'Generation pair contains %d empty model outputs; preserving them as valid '
+            'model behavior.', empty_outputs
+        )
+
+
 def extract_vanilla_data(data: List[Dict], language: str) -> Tuple[List[str], List[str], List[str], List[float]]:
     """
     Extract data for a single language from vanilla JSON.
@@ -218,38 +314,75 @@ class MultilingualEntailmentDeberta:
         self.model = AutoModelForSequenceClassification.from_pretrained(model_name).to(DEVICE)
         self.model.eval()
         
-        # Label mapping for this model
-        # 0: contradiction, 1: neutral, 2: entailment
+        # This checkpoint uses raw labels 0=entailment, 1=neutral, 2=contradiction.
+        # check_implication remaps them to the SNNE convention.
         self.id2label = self.model.config.id2label
         logger.info(f"Model labels: {self.id2label}")
     
-    def check_implication(self, text1: str, text2: str, *args, **kwargs):
+    def check_implication(
+        self,
+        text1,
+        text2,
+        *args,
+        batch_size: int = 256,
+        **kwargs,
+    ):
         """
         Check if text1 implies text2.
 
-        Returns a tuple (implication, confidence) to match the SNNE codebase
-        interface (EntailmentDeberta.check_implication):
-            implication: int  0=contradiction, 1=neutral, 2=entailment
-            confidence:  float  softmax probability of the entailment class
+        Scalar inputs return ``(int, float)``. Sequence inputs return parallel
+        ``(List[int], List[float])`` values, matching the batched KLE graph API.
+        Implications use 0=contradiction, 1=neutral, 2=entailment; confidence is
+        the predicted class probability, matching KLE's EntailmentDeberta.
 
         Note: This model's raw output is {0: 'entailment', 1: 'neutral', 2: 'contradiction'}
         so we remap the class index to match the SNNE convention.
         """
-        inputs = self.tokenizer(text1, text2, return_tensors="pt", truncation=True, max_length=512).to(DEVICE)
-
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-            logits = outputs.logits
-            probs = F.softmax(logits, dim=1)
-            raw_prediction = torch.argmax(logits, dim=1).item()
-
         # Remap: model's raw 0->entailment becomes 2, raw 2->contradiction becomes 0
         label_remap = {0: 2, 1: 1, 2: 0}  # entail->2, neutral->1, contradict->0
-        implication = label_remap[raw_prediction]
+        text1_is_batch = isinstance(text1, (list, tuple))
+        text2_is_batch = isinstance(text2, (list, tuple))
 
-        # Entailment probability: model's raw index 0 = entailment
-        confidence = probs[0, 0].item()
-        return implication, confidence
+        if text1_is_batch != text2_is_batch:
+            raise TypeError("text1 and text2 must both be strings or both be sequences")
+
+        if not text1_is_batch:
+            inputs = self.tokenizer(
+                text1, text2, return_tensors="pt", truncation=True, max_length=512
+            ).to(DEVICE)
+            with torch.no_grad():
+                logits = self.model(**inputs).logits
+            raw_prediction = torch.argmax(logits, dim=1).item()
+            confidence = F.softmax(logits, dim=1).max(dim=1).values.item()
+            return label_remap[raw_prediction], confidence
+
+        if len(text1) != len(text2):
+            raise ValueError("Batched text1 and text2 must have the same length")
+        if batch_size <= 0:
+            raise ValueError("batch_size must be positive")
+
+        implications = []
+        confidences = []
+        for start in range(0, len(text1), batch_size):
+            batch_text1 = list(text1[start:start + batch_size])
+            batch_text2 = list(text2[start:start + batch_size])
+            inputs = self.tokenizer(
+                batch_text1,
+                batch_text2,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=512,
+            ).to(DEVICE)
+            with torch.no_grad():
+                logits = self.model(**inputs).logits
+
+            raw_predictions = torch.argmax(logits, dim=1).cpu().tolist()
+            prediction_confidences = F.softmax(logits, dim=1).max(dim=1).values.cpu().tolist()
+            implications.extend(label_remap[prediction] for prediction in raw_predictions)
+            confidences.extend(float(probability) for probability in prediction_confidences)
+
+        return implications, confidences
     
     def get_similarity_score(self, text1: str, text2: str, strict_entailment: bool = True) -> float:
         """
@@ -382,6 +515,8 @@ def auarc(y_score: List[float], y_true: List[float]) -> float:
     mask = ~(np.isnan(y_true) | np.isnan(y_score))
     y_true = y_true[mask]
     y_score = y_score[mask]
+    if len(y_true) < 2:
+        return float('nan')
     
     df = pd.DataFrame({"u": y_score, 'a': y_true}).sort_values('u', ascending=True)
     df['amean'] = df['a'].expanding().mean()
@@ -401,6 +536,8 @@ def aucpr(y_score: List[float], y_true: List[float]) -> float:
     mask = ~(np.isnan(y_true) | np.isnan(y_score))
     y_true = y_true[mask]
     y_score = y_score[mask]
+    if len(y_true) == 0:
+        return float('nan')
     
     # Normalize y_true
     min_t, max_t = np.min(y_true), np.max(y_true)
@@ -468,18 +605,32 @@ def logsumexp_by_id(
     
     Returns log likelihood per semantic class.
     """
-    unique_ids = sorted(list(set(semantic_ids)))
+    if len(semantic_ids) != len(log_likelihoods):
+        raise ValueError(
+            'semantic_ids and log_likelihoods must contain the same number of values'
+        )
+    if not semantic_ids:
+        return []
+
+    def stable_logsumexp(values):
+        values = np.asarray(values, dtype=float)
+        maximum = np.max(values)
+        if np.isneginf(maximum):
+            return float('-inf')
+        return float(maximum + np.log(np.exp(values - maximum).sum()))
+
+    unique_ids = sorted(set(semantic_ids))
     log_likelihood_per_semantic_id = []
+    normalization = stable_logsumexp(log_likelihoods)
     
     for uid in unique_ids:
         id_indices = [pos for pos, x in enumerate(semantic_ids) if x == uid]
         id_log_likelihoods = [log_likelihoods[i] for i in id_indices]
         
         if agg == 'sum_normalized':
-            log_lik_norm = np.array(id_log_likelihoods) - np.log(np.sum(np.exp(log_likelihoods)))
-            logsumexp_value = np.log(np.sum(np.exp(log_lik_norm)))
+            logsumexp_value = stable_logsumexp(id_log_likelihoods) - normalization
         else:
-            logsumexp_value = np.log(np.sum(np.exp(id_log_likelihoods)))
+            logsumexp_value = stable_logsumexp(id_log_likelihoods)
         
         log_likelihood_per_semantic_id.append(logsumexp_value)
     
@@ -543,14 +694,18 @@ def save_results_csv(results: Dict[str, Any], output_path: str):
     import pandas as pd
     
     df = pd.DataFrame(results)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
     df.to_csv(output_path, index=False)
     logger.info(f"Saved results to {output_path}")
 
 
 def save_results_json(results: Dict[str, Any], output_path: str):
     """Save results dictionary to JSON."""
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
     logger.info(f"Saved results to {output_path}")

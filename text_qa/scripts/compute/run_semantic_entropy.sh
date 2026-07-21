@@ -3,4 +3,4 @@ set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_baseline_common.sh"
 baseline_setup
-run_okvqa_baseline compute_kle.py
+run_text_baseline compute_semantic_entropy.py

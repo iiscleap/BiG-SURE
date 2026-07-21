@@ -132,13 +132,17 @@ def compute_all_baselines_with_precomputed(generations, precomputed_entailments,
                                            accuracy_dict=None, self_similarity=False):
     by_original = organize_by_original_id(generations)
     logger.info(f"Found {len(by_original)} original questions")
+    generation_ids = set(by_original)
+    entailment_ids = set(precomputed_entailments)
+    if generation_ids != entailment_ids:
+        raise ValueError('Rephrased generations and entailment archive contain different question IDs.')
+    if accuracy_dict is not None and set(map(str, accuracy_dict)) != entailment_ids:
+        raise ValueError('Vanilla accuracy labels and entailment archive contain different question IDs.')
     
     graph_results = {}
     
     for orig_id in tqdm(sorted(by_original.keys()), desc="Processing"):
-        precomp = precomputed_entailments.get(str(orig_id))
-        if precomp is None:
-            continue
+        precomp = precomputed_entailments[str(orig_id)]
         
         W_full = probs_to_weights_matrix(
             precomp['probs_fwd'],
@@ -152,11 +156,25 @@ def compute_all_baselines_with_precomputed(generations, precomputed_entailments,
             weights = np.ones(W.shape[1])
         else:
             rephrasings = by_original[orig_id]
-            all_high_t, paraphrase_indices = extract_all_high_t_with_paraphrase_indices(rephrasings)
+            generated_high_t, generated_paraphrase_indices = extract_all_high_t_with_paraphrase_indices(rephrasings)
+            all_high_t = precomp['high_texts']
+            paraphrase_indices = precomp['paraphrase_indices']
 
             m_precomputed, n_precomputed = W_full.shape
+            if precomp['m'] != m_precomputed or precomp['n'] != n_precomputed:
+                raise ValueError(f'Entailment dimensions are inconsistent for question {orig_id!r}.')
+            if len(all_high_t) != n_precomputed or len(paraphrase_indices) != n_precomputed:
+                raise ValueError(f'Entailment metadata is inconsistent for question {orig_id!r}.')
+            if generated_high_t[:n_precomputed] != all_high_t:
+                raise ValueError(f'Rephrased responses no longer match entailments for question {orig_id!r}.')
+            if generated_paraphrase_indices[:n_precomputed] != paraphrase_indices:
+                raise ValueError(f'Rephrasing order no longer matches for question {orig_id!r}.')
             K_low = int(k_low_t) if k_low_t else m_precomputed
             K_high = int(subsample_high_t) if subsample_high_t else n_precomputed
+            if K_low <= 0 or K_low > m_precomputed:
+                raise ValueError(f'k_low_t must be in [1, {m_precomputed}], got {K_low}.')
+            if K_high <= 0 or K_high > n_precomputed:
+                raise ValueError(f'subsample_high_t must be in [1, {n_precomputed}], got {K_high}.')
 
             if K_low < m_precomputed and K_low > 0:
                 W_current = W_full[:K_low, :]
@@ -164,34 +182,22 @@ def compute_all_baselines_with_precomputed(generations, precomputed_entailments,
                 W_current = W_full
 
             if K_high < n_precomputed and K_high > 0:
-                rnd = random.Random(2000)
+                rnd = random.Random(subsample_seed)
                 sampled_indices = sorted(rnd.sample(range(n_precomputed), K_high))
                 W = W_current[:, sampled_indices]
-                if len(all_high_t) >= n_precomputed:
-                    high_texts_for_weight = [all_high_t[i] for i in sampled_indices]
-                    para_indices_sampled = [paraphrase_indices[i] for i in sampled_indices]
-                else:
-                    precomp_high = precomp.get('high_texts', [])
-                    if len(precomp_high) >= n_precomputed:
-                        high_texts_for_weight = [precomp_high[i] for i in sampled_indices]
-                    else:
-                        high_texts_for_weight = precomp_high[:K_high] if len(precomp_high) >= K_high else precomp_high
-                    para_indices_sampled = [0] * len(high_texts_for_weight)
+                high_texts_for_weight = [all_high_t[i] for i in sampled_indices]
+                para_indices_sampled = [paraphrase_indices[i] for i in sampled_indices]
             else:
                 W = W_current
-                if len(all_high_t) >= n_precomputed:
-                    high_texts_for_weight = all_high_t
-                    para_indices_sampled = paraphrase_indices
-                else:
-                    high_texts_for_weight = precomp.get('high_texts', [])
-                    para_indices_sampled = [0] * len(high_texts_for_weight)
+                high_texts_for_weight = all_high_t
+                para_indices_sampled = paraphrase_indices
 
             weights = compute_paraphrase_weights(
                 high_texts_for_weight, para_indices_sampled,
                 weighting_scheme, divergence_measure, sim_threshold
             )
             if len(weights) != W.shape[1]:
-                weights = np.ones(W.shape[1])
+                raise ValueError(f'Column weights do not match entailments for question {orig_id!r}.')
 
         # 1. BiG-SURE scores (Total, Top-1, Top-2)
         m_curr, n_curr = W.shape
@@ -329,6 +335,7 @@ def main():
     parser.add_argument('--sim_threshold', type=float, default=0.5)
     parser.add_argument('--k_low_t', type=int, default=3)
     parser.add_argument('--subsample_high_t', type=int, default=10)
+    parser.add_argument('--subsample_seed', type=int, default=2000)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--model_name', type=str, required=True)
     parser.add_argument('--metric', type=str, default='squad')
@@ -363,6 +370,7 @@ def main():
         weighting_scheme=args.weighting_scheme,
         sim_threshold=args.sim_threshold,
         k_low_t=args.k_low_t, subsample_high_t=args.subsample_high_t,
+        subsample_seed=args.subsample_seed,
         accuracy_dict=accuracy_dict,
         self_similarity=args.non_rephrased
     )

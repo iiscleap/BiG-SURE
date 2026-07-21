@@ -1,5 +1,8 @@
 # import openai
 import os
+import io
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from tqdm import tqdm, trange
 from ipdb import set_trace
 import json
@@ -63,7 +66,11 @@ def get_chatgpt_info(model_name: str,
                      temperature: float, 
                      max_tokens: int,
                      logprobs=True,
-                     persona_info="You are an excellent question responder.") -> str:
+                     persona_info="You are an excellent question responder.",
+                     client=None) -> str:
+    if client is None:
+        from openai import OpenAI
+        client = OpenAI()
     
     # print(persona_info)
     response = client.chat.completions.create(
@@ -168,11 +175,17 @@ def read_jsonl(filename):
 
 
 def write_jsonl(filename, dataset):
+    parent = os.path.dirname(filename)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with open(filename, "w", encoding="utf-8") as fw:
         fw.writelines([json.dumps(obj=ins, ensure_ascii=False) + '\n' for ins in dataset])
 
 
 def write_json(filename, dataset):
+    parent = os.path.dirname(filename)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with open(filename, "w", encoding="utf-8") as fw:
         json.dump(fp=fw, obj=dataset, indent=4, ensure_ascii=False)
 
@@ -208,7 +221,7 @@ def format_seconds(seconds):
 
 
 def get_current_time():
-    tz = pytz.timezone('Asia/Shanghai')
+    tz = ZoneInfo('Asia/Shanghai')
     return datetime.now(tz).strftime('%Y-%m-%d %H:%M:%S %Z%z')
 
 
@@ -216,6 +229,8 @@ def get_current_time():
 Model parameters utils
 """
 def find_all_linear_names(model):
+    import bitsandbytes as bnb
+
     cls = bnb.nn.Linear4bit
     lora_module_names = set()
     for name, module in model.named_modules():

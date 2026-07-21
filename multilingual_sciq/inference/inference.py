@@ -202,7 +202,12 @@ def output_split(output, tokenizer, split_len, prompt_split):
         token_probs.append(token_prob)
         
     # import pdb; pdb.set_trace()
-    norm_prob = float(np.array(pow(reduce(operator.mul, token_probs), 1/len(token_probs))))
+    if token_probs:
+        clipped_probs = np.clip(np.asarray(token_probs, dtype=float), 1e-300, 1.0)
+        norm_prob = float(np.exp(np.mean(np.log(clipped_probs))))
+    else:
+        logging.warning('Generation produced no scored response tokens; storing probability 0.')
+        norm_prob = 0.0
     return response, norm_prob
 
 
@@ -219,21 +224,36 @@ def dataset_loader():
     few_shot_split = prompt_template["few_shot_split"]
     prompt_input = prompt_template["standard_prompt"]
 
-    few_shot_examplar_list = format_examplar(dataset[:infer_args.num_examples], few_shot_split)
-    dataset = dataset[infer_args.num_examples:]
-    
     # Filter to only original 300 IDs if filter_ids_from is specified
     valid_ids = None
     if data_args.filter_ids_from and os.path.exists(data_args.filter_ids_from):
         valid_ids = load_original_ids_from_rephrased(data_args.filter_ids_from)
         logging.info(f"Filtering dataset to {len(valid_ids)} original question IDs")
 
+    if valid_ids is not None:
+        exemplar_source = [
+            item for item in dataset
+            if str(item['question_id']) not in valid_ids
+        ]
+        dataset = [
+            item for item in dataset
+            if str(item['question_id']) in valid_ids
+        ]
+    else:
+        exemplar_source = dataset[:infer_args.num_examples]
+        dataset = dataset[infer_args.num_examples:]
+
+    if len(exemplar_source) < infer_args.num_examples:
+        raise ValueError(
+            f'Need {infer_args.num_examples} few-shot examples outside the evaluation set; '
+            f'found {len(exemplar_source)}.'
+        )
+    few_shot_examplar_list = format_examplar(
+        exemplar_source[:infer_args.num_examples], few_shot_split
+    )
+
     samples = []
     for data in dataset:
-        # Skip if filtering is enabled and this ID is not in valid_ids
-        if valid_ids is not None and str(data["question_id"]) not in valid_ids:
-            continue
-            
         sample = {
             "question_id": data["question_id"],
             "question": data["question"],
@@ -269,11 +289,25 @@ def rephrased_dataset_loader():
     few_shot_split = prompt_template["few_shot_split"]
     prompt_input = prompt_template["standard_prompt"]
 
-    # For rephrased data, we need few-shot examples from the original dataset
+    # Draw few-shot examples outside the 300-question evaluation set.
     original_data_path = os.path.join(data_args.data_dir.format(data_args.dataset),
                                       "mling_{}.json".format(data_args.dataset))
     original_dataset = json.load(open(original_data_path))
-    few_shot_examplar_list = format_examplar(original_dataset[:infer_args.num_examples], few_shot_split)
+    evaluation_ids = {
+        str(item['question_id']) for item in dataset if 'original_id' not in item
+    }
+    exemplar_source = [
+        item for item in original_dataset
+        if str(item['question_id']) not in evaluation_ids
+    ]
+    if len(exemplar_source) < infer_args.num_examples:
+        raise ValueError(
+            f'Need {infer_args.num_examples} few-shot examples outside the evaluation set; '
+            f'found {len(exemplar_source)}.'
+        )
+    few_shot_examplar_list = format_examplar(
+        exemplar_source[:infer_args.num_examples], few_shot_split
+    )
 
     samples = []
     for data in dataset:
@@ -661,9 +695,20 @@ if __name__=="__main__":
     # import pdb; pdb.set_trace()
     infer_args.save_path = os.path.join(infer_args.output_dir, "generate.json")
     if data_args.continue_generate and os.path.exists(infer_args.save_path):
-        exist_num = len(read_jsonl(infer_args.save_path))
-        # Split the dataset if needed.
-        dataset = dataset[exist_num::]
+        with open(infer_args.save_path, 'r', encoding='utf-8') as existing_file:
+            existing_content = existing_file.read().strip()
+        if existing_content:
+            if existing_content[0] == '[':
+                existing_records = json.loads(existing_content)
+                write_jsonl(infer_args.save_path, existing_records)
+            else:
+                existing_records = [
+                    json.loads(line) for line in existing_content.splitlines() if line.strip()
+                ]
+        else:
+            existing_records = []
+        completed_ids = {str(item['question_id']) for item in existing_records}
+        dataset = [item for item in dataset if str(item['question_id']) not in completed_ids]
     else:
         # dataset = dataset[:3]
         open(infer_args.save_path, "w").close()

@@ -38,6 +38,7 @@ from multilingual_utils import (
     auarc,
     aucpr,
     save_results_csv,
+    validate_generation_pair,
     LANGUAGES
 )
 
@@ -274,6 +275,10 @@ def main():
     available_languages = get_languages(vanilla_data)
     languages = args.languages if args.languages else available_languages
     logger.info(f"Languages to process: {languages}")
+    validate_generation_pair(
+        vanilla_data, sampling_data, languages,
+        require_accuracy=args.metric in ('claude', 'gemini')
+    )
     
     # Load NLI model
     nli_model = MultilingualEntailmentDeberta()

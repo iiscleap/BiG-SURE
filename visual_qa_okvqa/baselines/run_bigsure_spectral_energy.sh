@@ -23,20 +23,23 @@ short_model() {
 
 OUT_BASE="outputs/spectral_energy"
 mkdir -p "${OUT_BASE}"
+COMPLETED=0
 
 for MODEL in "${MODELS[@]}"; do
   SHORT="$(short_model "${MODEL}")"
   for SEED in "${SEEDS[@]}"; do
     ENTAIL="outputs/entailments/${MODEL}_seed${SEED}_perturbed.npz"
     VANILLA="outputs/responses/vanilla/${MODEL}_seed${SEED}/validation_generations.pkl"
-    if [[ ! -f "${ENTAIL}" || ! -f "${VANILLA}" ]]; then
-      echo "Skipping ${MODEL} seed ${SEED}; missing entailments or vanilla pkl"
+    ACCURACY="outputs/responses/vanilla/${MODEL}_seed${SEED}/vqa_accuracy.json"
+    if [[ ! -f "${ENTAIL}" || ! -f "${VANILLA}" || ! -f "${ACCURACY}" ]]; then
+      echo "[skip] ${MODEL}/seed${SEED}: missing entailments, vanilla pkl, or accuracy JSON" >&2
       continue
     fi
 
     "${PYTHON_BIN}" snne/compute_spectral_energy_weighted_okvqa.py \
       --entailments_file "${ENTAIL}" \
       --vanilla_pkl "${VANILLA}" \
+      --accuracy_file "${ACCURACY}" \
       --metric vqa_acc \
       --metric_threshold 0.5 \
       --output_dir "${OUT_BASE}/okvqa_${SHORT}_seed${SEED}_ss${SUBSAMPLE_SEED}_entail_prob_min" \
@@ -49,5 +52,11 @@ for MODEL in "${MODELS[@]}"; do
       --subsample_high_t "${SUBSAMPLE_HIGH_T}" \
       --subsample_seed "${SUBSAMPLE_SEED}" \
       --model_name "${MODEL}"
+    COMPLETED=$((COMPLETED + 1))
   done
 done
+
+[[ "${COMPLETED}" -gt 0 ]] || {
+  echo "No complete OKVQA entailment runs were found." >&2
+  exit 1
+}

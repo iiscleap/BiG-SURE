@@ -70,6 +70,7 @@ import pickle
 import json
 import logging
 import random
+import hashlib
 from pathlib import Path
 from collections import defaultdict
 from tqdm import tqdm
@@ -127,6 +128,11 @@ def load_pkl_file(pkl_path):
     """Load pickle file containing generations."""
     with open(pkl_path, 'rb') as f:
         data = pickle.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f'{pkl_path} must contain a dictionary keyed by question ID')
+    # Pickles created from JSON-backed datasets sometimes use integer IDs while
+    # CSV-backed runs use strings. All cross-file joins use canonical strings.
+    data = {str(qid): example for qid, example in data.items()}
     logger.info(f"Loaded {len(data)} entries from {pkl_path}")
     return data
 
@@ -203,7 +209,66 @@ def build_rephrased_mapping(rephrased_data, mode='rephrased'):
         logger.info(f"Sample: {sample_id} has {sample_count} {mode_str} variants")
         logger.info(f"  Sample IDs: {sample_ids}")
     
+    for entries in mapping.values():
+        entries.sort(key=lambda pair: str(pair[0]))
     return dict(mapping)
+
+
+def validate_okvqa_inputs(vanilla_data, accuracy_dict, rephrased_mapping, mode,
+                           k_low_t, subsample_high_t, high_t_per_variant=10):
+    expected_ids = set(vanilla_data)
+    if expected_ids != set(accuracy_dict) or expected_ids != set(rephrased_mapping):
+        raise ValueError(
+            'Vanilla, accuracy, and perturbed generation artifacts must contain '
+            'exactly the same original question IDs.'
+        )
+
+    variants_per_question = 35 if mode == 'perturbed' else 5
+    for qid in sorted(expected_ids):
+        low_responses = vanilla_data[qid].get('low_temp_responses', [])
+        if len(low_responses) != k_low_t:
+            raise ValueError(
+                f'Vanilla question {qid} has {len(low_responses)} low-temperature '
+                f'responses; expected exactly {k_low_t}.'
+            )
+        for index, response in enumerate(low_responses):
+            if (not isinstance(response, (list, tuple)) or len(response) < 2
+                    or not isinstance(response[0], str) or not response[0].strip()):
+                raise ValueError(f'Vanilla question {qid} has invalid low-T response {index}.')
+
+        variants = rephrased_mapping[qid]
+        if len(variants) != variants_per_question:
+            raise ValueError(
+                f'Question {qid} has {len(variants)} perturbed/rephrased variants; '
+                f'expected {variants_per_question}.'
+            )
+        if mode == 'perturbed':
+            rephrase_counts = defaultdict(int)
+            for variant_id, _ in variants:
+                rephrase_counts[extract_rephrasing_number(variant_id)] += 1
+            if rephrase_counts != {index: 7 for index in range(1, 6)}:
+                raise ValueError(
+                    f'Question {qid} must have seven image perturbations for each of '
+                    f'five rephrasings; found {dict(rephrase_counts)}.'
+                )
+        for variant_id, variant in variants:
+            responses = variant.get('responses', [])
+            if len(responses) != high_t_per_variant:
+                raise ValueError(
+                    f'Variant {variant_id} has {len(responses)} high-T responses; '
+                    f'expected {high_t_per_variant}.'
+                )
+            for index, response in enumerate(responses):
+                if (not isinstance(response, (list, tuple)) or len(response) < 2
+                        or not isinstance(response[0], str) or not response[0].strip()):
+                    raise ValueError(f'Variant {variant_id} has invalid high-T response {index}.')
+
+        available_high_t = variants_per_question * high_t_per_variant
+        if not 0 < subsample_high_t <= available_high_t:
+            raise ValueError(
+                f'--subsample_high_t must be in [1, {available_high_t}], '
+                f'got {subsample_high_t}.'
+            )
 
 
 def extract_low_t_samples_from_vanilla(vanilla_data, qid):
@@ -351,6 +416,7 @@ def save_results_npz(results, filepath):
             save_dict[f"{prefix}accuracy"] = np.array([data['accuracy']])
     
     save_dict['question_ids'] = np.array(question_ids, dtype=object)
+    save_dict['schema_version'] = np.array([2], dtype=np.int16)
     np.savez_compressed(filepath, **save_dict)
 
 
@@ -457,9 +523,11 @@ def precompute_rephrased_entailments(
     for qid in tqdm(sorted(common_ids), desc="Precomputing rephrased entailments"):
         # Seed for reproducibility
         try:
-            base = int(qid.replace('-', '')[:8], 16) if '-' in qid else hash(qid)
-        except:
-            base = hash(qid)
+            base = int(qid.replace('-', '')[:8], 16) if '-' in qid else int(
+                hashlib.sha256(qid.encode('utf-8')).hexdigest()[:8], 16
+            )
+        except (TypeError, ValueError):
+            base = int(hashlib.sha256(str(qid).encode('utf-8')).hexdigest()[:8], 16)
         rnd = random.Random(subsample_seed + base)
         
         # Get low-T texts from mapped low-temp variants or vanilla low_temp_responses
@@ -470,24 +538,19 @@ def precompute_rephrased_entailments(
             low_t_all = extract_low_t_samples_from_vanilla(low_t_source, qid)
         
         if len(low_t_all) == 0:
-            skipped_no_low_t += 1
-            continue
+            raise ValueError(f'Question {qid} has no usable low-temperature responses.')
         
         # Subsample low-T
         if len(low_t_all) > k_low_t:
             low_texts = rnd.sample(low_t_all, k_low_t)
         else:
             low_texts = low_t_all[:k_low_t]
-            # Pad if needed by repeating
-            while len(low_texts) < k_low_t and len(low_t_all) > 0:
-                low_texts.append(low_t_all[0])
         
         # Get high-T texts from all rephrased variants (T=1.0)
         high_t_all, para_indices_all = extract_high_t_samples_from_rephrased_mapping(rephrased_mapping, qid, mode=mode)
         
         if len(high_t_all) == 0:
-            skipped_no_high_t += 1
-            continue
+            raise ValueError(f'Question {qid} has no usable perturbed responses.')
         
         # Subsample high-T (with their paraphrase indices)
         if len(high_t_all) > subsample_high_t:
@@ -511,8 +574,8 @@ def precompute_rephrased_entailments(
             high_texts = []
             paraphrase_indices = []
         
-        if len(low_texts) == 0 or len(high_texts) == 0:
-            continue
+        if len(low_texts) != k_low_t or len(high_texts) != subsample_high_t:
+            raise ValueError(f'Validated response counts changed while processing question {qid}.')
         
         # Compute entailment probabilities
         probs_fwd, probs_bwd = compute_entailment_probs_matrix(
@@ -618,6 +681,16 @@ def main():
     # Build mapping from original ID to rephrased/perturbed entries
     logger.info(f"Building {args.mode} mapping (original_id -> entries)...")
     rephrased_mapping = build_rephrased_mapping(rephrased_data, mode=args.mode)
+
+    if low_temp_mapping is None:
+        validate_okvqa_inputs(
+            vanilla_data,
+            accuracy_dict,
+            rephrased_mapping,
+            args.mode,
+            args.k_low_t,
+            args.subsample_high_t,
+        )
     
     # Initialize entailment scorer (batched inference)
     logger.info("Loading EntailmentScorer...")

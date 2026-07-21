@@ -20,6 +20,7 @@ import logging
 import random
 import json
 import pickle
+from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 import torch
@@ -73,7 +74,7 @@ def load_vqa_data(questions_json, answers_json=None):
     return dataset
 
 
-def load_vqa_from_csv(csv_path):
+def load_vqa_from_csv(csv_path, image_dir=None):
     """Load VQA examples from a CSV with columns: question_id, question, image_path, answers_joined.
     
     Args:
@@ -90,6 +91,8 @@ def load_vqa_from_csv(csv_path):
         image_path = row.get('image_path') if 'image_path' in row else row.get('metadata_image_path')
         if pd.isna(image_path):
             image_path = None
+        elif image_dir:
+            image_path = str(Path(image_dir) / Path(str(image_path)).name)
         
         # Parse answers from answers_joined column (semicolon-separated)
         answers_list = []
@@ -227,7 +230,7 @@ def main(args):
     
     if getattr(args, 'input_csv', None):
         logging.info(f"Loading VQA data from CSV {args.input_csv}")
-        validation_dataset = load_vqa_from_csv(args.input_csv)
+        validation_dataset = load_vqa_from_csv(args.input_csv, image_dir=image_dir)
     else:
         questions_json = args.vqa_questions_json
         answers_json = getattr(args, 'vqa_answers_json', None)
@@ -243,7 +246,7 @@ def main(args):
     logging.info(80 * '=')
     
     # This will store all input data and model predictions
-    accuracies, generations, results_dict = [], {}, {}
+    accuracies, generations = [], {}
 
     # Sample indices
     possible_indices = range(0, len(validation_dataset))
@@ -363,12 +366,21 @@ def main(args):
     print(f"Overall validation split accuracy: {accuracy}")
     wandb.log({"validation_accuracy": accuracy})
 
+    results_dict = {
+        'schema_version': 1,
+        'question_ids': [str(qid) for qid in generations],
+    }
     utils.save(results_dict, 'uncertainty_measures.pkl')
     utils.save(experiment_details, 'experiment_details.pkl')
     if args.output:
-        os.makedirs(os.path.dirname(args.output) or '.', exist_ok=True)
+        local_dir = os.path.dirname(args.output) or '.'
+        os.makedirs(local_dir, exist_ok=True)
         with open(args.output, 'wb') as destination:
             pickle.dump(generations, destination)
+        with open(os.path.join(local_dir, 'uncertainty_measures.pkl'), 'wb') as destination:
+            pickle.dump(results_dict, destination)
+        with open(os.path.join(local_dir, 'experiment_details.pkl'), 'wb') as destination:
+            pickle.dump(experiment_details, destination)
         logging.info('Saved local generations to %s', args.output)
     logging.info('Run complete.')
     del model

@@ -40,16 +40,15 @@ import os
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from multilingual_utils import MultilingualEntailmentDeberta, LANGUAGES
+from multilingual_utils import MultilingualEntailmentDeberta, LANGUAGES, load_json_data
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
 def load_json(filepath):
-    """Load JSON data from file."""
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    """Load either JSON-array or JSONL generation data."""
+    return load_json_data(filepath)
 
 
 def save_results_npz(results, filepath):
@@ -64,10 +63,14 @@ def save_results_npz(results, filepath):
         save_dict[f"{prefix}_probs_bwd"] = results[key]['probs_bwd']
         save_dict[f"{prefix}_low_texts"] = np.array(results[key]['low_texts'], dtype=object)
         save_dict[f"{prefix}_high_texts"] = np.array(results[key]['high_texts'], dtype=object)
+        save_dict[f"{prefix}_paraphrase_indices"] = np.array(
+            results[key].get('paraphrase_indices', []), dtype=np.int32
+        )
     
     # Save metadata
     save_dict['question_ids'] = np.array([k[0] for k in keys], dtype=object)
     save_dict['languages'] = np.array([k[1] for k in keys], dtype=object)
+    save_dict['schema_version'] = np.array([2], dtype=np.int32)
     
     np.savez_compressed(filepath, **save_dict)
     logger.info(f"Saved precomputed entailments to {filepath}")
@@ -111,6 +114,66 @@ def ensure_string_list(texts, name="texts"):
             continue
         result.append(text)
     return result
+
+
+def validate_sampling_inputs(vanilla_data, sampling_data, k_low_t, high_t_per_rephrase):
+    """Validate the 4-language, five-rephrase BiG-SURE generation contract."""
+    vanilla_lookup = {str(item.get('question_id')): item for item in vanilla_data}
+    if len(vanilla_lookup) != len(vanilla_data) or not vanilla_lookup:
+        raise ValueError('Vanilla data must contain unique, non-empty question IDs.')
+
+    grouped = {}
+    rephrased_ids = []
+    for item in sampling_data:
+        if item.get('question_id') is None or item.get('original_id') is None:
+            raise ValueError('Every rephrased record must contain question_id and original_id.')
+        qid = str(item.get('question_id'))
+        rephrased_ids.append(qid)
+        base_qid = str(item['original_id'])
+        grouped.setdefault(base_qid, []).append(item)
+    if len(set(rephrased_ids)) != len(rephrased_ids):
+        raise ValueError('Rephrased sampling contains duplicate question IDs.')
+
+    if set(vanilla_lookup) != set(grouped):
+        missing_groups = sorted(set(vanilla_lookup) - set(grouped))
+        extra_groups = sorted(set(grouped) - set(vanilla_lookup))
+        raise ValueError(
+            'Vanilla and rephrased sampling question IDs do not match. '
+            f'Missing: {missing_groups[:3]}; extra: {extra_groups[:3]}.'
+        )
+
+    for qid, vanilla_item in vanilla_lookup.items():
+        variants = grouped[qid]
+        if len(variants) != 5:
+            raise ValueError(
+                f'Question {qid} has {len(variants)} rephrased records; expected 5.'
+            )
+        for language in LANGUAGES:
+            low_outputs = vanilla_item.get('output', {}).get(language, [])
+            if len(low_outputs) != k_low_t + 1:
+                raise ValueError(
+                    f'Question {qid}/{language} has {len(low_outputs)} vanilla outputs; '
+                    f'expected one greedy plus {k_low_t} low-temperature outputs.'
+                )
+            low_probs = vanilla_item.get('probs', {}).get(language, [])
+            if len(low_probs) != k_low_t + 1:
+                raise ValueError(f'Question {qid}/{language} has mismatched vanilla probabilities.')
+            for variant in variants:
+                outputs = variant.get('output', {}).get(language, [])
+                if len(outputs) != high_t_per_rephrase + 1:
+                    raise ValueError(
+                        f'Rephrased question {variant.get("question_id")}/{language} has '
+                        f'{len(outputs)} outputs; expected one greedy plus '
+                        f'{high_t_per_rephrase} stochastic outputs.'
+                    )
+                probs = variant.get('probs', {}).get(language, [])
+                if len(probs) != high_t_per_rephrase + 1:
+                    raise ValueError(
+                        f'Rephrased question {variant.get("question_id")}/{language} '
+                        'has mismatched probabilities.'
+                    )
+
+    return grouped
 
 
 def compute_entailment_probs_batch(model, texts_a, texts_b, batch_size=32):
@@ -266,24 +329,30 @@ def precompute_sampling_entailments(sampling_data, vanilla_data, model,
     """
     results = {}
     
-    # Build vanilla lookup
-    vanilla_lookup = {}
-    for item in vanilla_data:
-        qid = item['question_id']
-        vanilla_lookup[qid] = item
+    vanilla_lookup = {str(item['question_id']): item for item in vanilla_data}
+
+    # Rephrased sampling has five records per original question. Aggregate those
+    # records before entailment so each matrix is 3 low-T x 50 high-T and carries
+    # the true paraphrase assignment for every high-T column.
+    sampling_groups = {}
+    for item in sampling_data:
+        qid = str(item['question_id'])
+        base_qid = str(item.get('original_id', qid.split('_r')[0]))
+        sampling_groups.setdefault(base_qid, []).append(item)
+
+    for items in sampling_groups.values():
+        items.sort(key=lambda item: (item.get('rephrase_idx', 0), str(item['question_id'])))
     
-    logger.info(f"Precomputing sampling entailments for {len(sampling_data)} questions")
+    logger.info(
+        "Precomputing sampling entailments for %d original questions from %d records",
+        len(sampling_groups), len(sampling_data)
+    )
     
     rng = np.random.RandomState(subsample_seed)
     
-    for item in tqdm(sampling_data, desc="Sampling precompute"):
-        qid = item['question_id']
-        
-        # Extract base question ID (strip rephrasing suffix like _r1, _r2, etc.)
-        base_qid = qid.split('_r')[0] if '_r' in str(qid) else qid
-        
+    for base_qid, items in tqdm(sampling_groups.items(), desc="Sampling precompute"):
         if base_qid not in vanilla_lookup:
-            logger.warning(f"Question {qid} (base: {base_qid}) not found in vanilla data, skipping")
+            logger.warning(f"Question {base_qid} not found in vanilla data, skipping")
             continue
         
         vanilla_item = vanilla_lookup[base_qid]
@@ -295,17 +364,31 @@ def precompute_sampling_entailments(sampling_data, vanilla_data, model,
                 continue
             low_texts = vanilla_outputs[1:k_low_t+1]  # indices 1,2,3 for k_low_t=3
             
-            # Get high-T from sampling (all k samples)
-            sampling_outputs = item['output'].get(lang, [])
-            if not sampling_outputs:
+            high_t_all = []
+            paraphrase_indices_all = []
+            for para_idx, item in enumerate(items):
+                sampling_outputs = item.get('output', {}).get(lang, [])
+                # Rephrased generation stores one greedy answer followed by k
+                # stochastic answers. Standard sampling stores only stochastic answers.
+                if 'original_id' in item:
+                    sampling_outputs = sampling_outputs[1:]
+                valid_outputs = ensure_string_list(
+                    sampling_outputs, f'{base_qid}/{lang}/paraphrase{para_idx}'
+                )
+                high_t_all.extend(valid_outputs)
+                paraphrase_indices_all.extend([para_idx] * len(valid_outputs))
+
+            if not high_t_all:
                 continue
             
             # Subsample high-T if needed
-            if len(sampling_outputs) > subsample_high_t:
-                indices = rng.choice(len(sampling_outputs), subsample_high_t, replace=False)
-                high_texts = [sampling_outputs[i] for i in sorted(indices)]
+            if len(high_t_all) > subsample_high_t:
+                indices = sorted(rng.choice(len(high_t_all), subsample_high_t, replace=False))
+                high_texts = [high_t_all[i] for i in indices]
+                paraphrase_indices = [paraphrase_indices_all[i] for i in indices]
             else:
-                high_texts = sampling_outputs
+                high_texts = high_t_all
+                paraphrase_indices = paraphrase_indices_all
             
             if len(low_texts) < 1 or len(high_texts) < 1:
                 continue
@@ -315,11 +398,12 @@ def precompute_sampling_entailments(sampling_data, vanilla_data, model,
                 model, low_texts, high_texts, batch_size
             )
             
-            results[(qid, lang)] = {
+            results[(base_qid, lang)] = {
                 'probs_fwd': probs_fwd,
                 'probs_bwd': probs_bwd,
                 'low_texts': low_texts,
-                'high_texts': high_texts
+                'high_texts': high_texts,
+                'paraphrase_indices': paraphrase_indices,
             }
     
     logger.info(f"Completed {len(results)} sampling entailment computations")
@@ -328,12 +412,16 @@ def precompute_sampling_entailments(sampling_data, vanilla_data, model,
 
 def main():
     parser = argparse.ArgumentParser(description="Precompute multilingual entailments")
+    parser.add_argument('--check_file', type=str, default=None,
+                       help='Exit successfully only if this is a current entailment archive')
     parser.add_argument('--vanilla_file', type=str, help='Path to vanilla JSON file')
     parser.add_argument('--sampling_file', type=str, help='Path to sampling JSON file')
-    parser.add_argument('--output_file', type=str, required=True, help='Output .npz file')
-    parser.add_argument('--mode', type=str, choices=['vanilla', 'sampling'], required=True)
+    parser.add_argument('--output_file', type=str, help='Output .npz file')
+    parser.add_argument('--mode', type=str, choices=['vanilla', 'sampling'])
     parser.add_argument('--k_low_t', type=int, default=3, help='Number of low-T responses')
     parser.add_argument('--subsample_high_t', type=int, default=10, help='Number of high-T responses')
+    parser.add_argument('--samples_per_rephrase', type=int, default=10,
+                       help='Expected stochastic outputs after each rephrased greedy output')
     parser.add_argument('--subsample_seed', type=int, default=0, help='Random seed for subsampling')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size for entailment computation')
     parser.add_argument('--model_name', type=str, 
@@ -341,22 +429,30 @@ def main():
                        help='Multilingual NLI model')
     
     args = parser.parse_args()
+
+    if args.check_file:
+        try:
+            archive = np.load(args.check_file, allow_pickle=True)
+            version = int(archive['schema_version'][0]) if 'schema_version' in archive.files else 1
+        except Exception as exc:
+            logger.error('Invalid entailment archive %s: %s', args.check_file, exc)
+            raise SystemExit(1) from exc
+        raise SystemExit(0 if version >= 2 else 1)
     
     # Validation
+    if not args.mode or not args.output_file:
+        parser.error("--mode and --output_file are required for precomputation")
     if args.mode == 'vanilla' and not args.vanilla_file:
         parser.error("--vanilla_file required for vanilla mode")
     if args.mode == 'sampling' and (not args.vanilla_file or not args.sampling_file):
         parser.error("Both --vanilla_file and --sampling_file required for sampling mode")
     
-    # Load model
-    logger.info("Loading multilingual NLI model...")
-    model = MultilingualEntailmentDeberta(args.model_name)
-    
     # Load data
     if args.mode == 'vanilla':
         logger.info(f"Loading vanilla data from {args.vanilla_file}")
         vanilla_data = load_json(args.vanilla_file)
-        
+        logger.info("Loading multilingual NLI model...")
+        model = MultilingualEntailmentDeberta(args.model_name)
         results = precompute_vanilla_entailments(
             vanilla_data, model,
             k_low_t=args.k_low_t,
@@ -368,7 +464,14 @@ def main():
         vanilla_data = load_json(args.vanilla_file)
         logger.info(f"Loading sampling data from {args.sampling_file}")
         sampling_data = load_json(args.sampling_file)
-        
+        validate_sampling_inputs(
+            vanilla_data,
+            sampling_data,
+            k_low_t=args.k_low_t,
+            high_t_per_rephrase=args.samples_per_rephrase,
+        )
+        logger.info("Loading multilingual NLI model...")
+        model = MultilingualEntailmentDeberta(args.model_name)
         results = precompute_sampling_entailments(
             sampling_data, vanilla_data, model,
             k_low_t=args.k_low_t,

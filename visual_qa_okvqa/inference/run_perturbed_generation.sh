@@ -25,6 +25,7 @@ NUM_GENERATIONS=10
 TEMPERATURE=1.0
 MIN_P=0.0
 CHECKPOINT_INTERVAL=500
+NUM_SAMPLES=7000
 
 mkdir -p logs
 
@@ -47,5 +48,9 @@ for MODEL in "${MODELS[@]}"; do
       --checkpoint_interval "${CHECKPOINT_INTERVAL}" \
       --experiment_lot "okvqa_perturbed" \
       2>&1 | tee "logs/${MODEL_SAFE}_okvqa_perturbed_seed${SEED}.log"
+    "${PYTHON_BIN}" evaluation/validate_okvqa_artifacts.py \
+      --perturbed "${OUTPUT}" \
+      --expected-examples "${NUM_SAMPLES}" \
+      --high-temp "${NUM_GENERATIONS}"
   done
 done
