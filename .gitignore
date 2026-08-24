@@ -1,1 +1,27 @@
-*__pycache__*
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Credentials and machine-local configuration
+.env
+.env.*
+!.env.example
+
+# Generated experiment artifacts. Previously committed reproducibility
+# artifacts remain tracked; these rules prevent new runs from being added.
+**/logs/
+**/outputs/
+**/results/
+**/wandb/
+**/*_results/
+
+# Editor and OS metadata
+.idea/
+.vscode/
+.DS_Store

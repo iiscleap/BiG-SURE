@@ -1,5 +1,7 @@
 # BiG-SURE
 
+Official implementation of the EMNLP 2026 main-conference paper, **BiG-SURE: Bipartite Graph Spectral Energy for Uncertainty and Reliability Estimation of LLMs**.
+
 BiG-SURE is the consolidated codebase for uncertainty estimation with stochastic generations, standard baselines, and BiG-SURE spectral energy across three task settings:
 
 - Text QA: TriviaQA and SVAMP.
@@ -93,7 +95,7 @@ PYTHONPATH="$PWD/text_qa:$PWD/multilingual_sciq/baselines" python -c "import mul
 
 ## Data Installation
 
-The `data/` directory is a separate. Root so the layout is:
+The separately distributed data bundle must be extracted as `data/` at the repository root. See [data/README.md](data/README.md) for its contents and placement instructions. The resulting layout is:
 
 ```text
 BiG-SURE/
