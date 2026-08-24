@@ -121,3 +121,28 @@ The task launchers use these canonical paths:
 - `data/multilingual_sciq/sciq/`
 
 No data symlinks or path edits are required. Every maintained launcher derives the repository and data roots from its own location. Run a launcher from any working directory; use `PYTHON_BIN=/path/to/python` only when selecting a Python executable without activating its Conda environment first.
+
+## Acknowledgements and Code Provenance
+
+This repository is substantially based on and adapted from [SNNE](https://github.com/BigML-CS-UCLA/SNNE), the official implementation of *Beyond Semantic Entropy: Boosting LLM Uncertainty Quantification with Pairwise Semantic Similarity*. We gratefully acknowledge Dang Nguyen, Ali Payani, and Baharan Mirzasoleiman for making that work available. BiG-SURE reuses and extends SNNE's answer-generation pipeline, uncertainty-quantification utilities, semantic-similarity infrastructure, and baseline implementations. This repository adds the task-specific Text QA, multilingual SciQ, and OKVQA workflows; artifact validation and entailment precomputation; and the BiG-SURE spectral-energy method.
+
+SNNE itself builds on several open-source projects, whose contributions are also part of this codebase's technical lineage:
+
+- [Semantic Uncertainty](https://github.com/jlko/semantic_uncertainty), which informed the SNNE repository structure and semantic-uncertainty pipeline.
+- [UQ-NLG](https://github.com/zlin7/UQ-NLG), from which SNNE adapted its graph-based uncertainty baselines.
+- [LM-Polygraph](https://github.com/IINemo/lm-polygraph), from which SNNE adapted summarization and translation components.
+
+We thank the authors and maintainers of SNNE and these upstream projects for releasing their code. Please retain this acknowledgement when redistributing derived versions of BiG-SURE, and follow the license and citation requirements of the relevant upstream projects.
+
+### SNNE Citation
+
+If you use the SNNE-derived components in this repository, please cite the original paper:
+
+```bibtex
+@article{nguyen2025beyond,
+  title={Beyond Semantic Entropy: Boosting LLM Uncertainty Quantification with Pairwise Semantic Similarity},
+  author={Nguyen, Dang and Payani, Ali and Mirzasoleiman, Baharan},
+  journal={In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (ACL)},
+  year={2025}
+}
+```
