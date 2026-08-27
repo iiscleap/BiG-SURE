@@ -11,7 +11,7 @@ ENTAILMENTS_BASE="${TASK_ROOT}/outputs/entailments"
 RESULTS_BASE="${TASK_ROOT}/results/spectral_energy"
 DATASETS=("sciq")
 MODELS=("apertus" "aya")
-SEEDS=(10 20 30 40 50)
+SEEDS=(10)
 PYTHON_BIN="${PYTHON_BIN:-python}"
 
 mkdir -p "${ENTAILMENTS_BASE}" "${RESULTS_BASE}"

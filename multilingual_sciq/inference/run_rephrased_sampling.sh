@@ -13,7 +13,7 @@ WANDB_DIR="${WANDB_DIR:-${TASK_ROOT}/outputs/wandb}"
 
 DATASETS=("sciq")
 MODELS=("apertus" "aya")
-SEEDS=(10 20 30 40 50)
+SEEDS=(10)
 K_SAMPLES=10
 
 for MODEL in "${MODELS[@]}"; do

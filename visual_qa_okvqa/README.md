@@ -6,7 +6,7 @@ This folder is the OKVQA-only visual QA workflow in BiG-SURE. It is scoped to th
 - `mistralai/Pixtral-12B-2409`
 - `Qwen/Qwen3-VL-8B-Instruct`
 
-The launchers use seeds `10 20 30 40 50` by default. Change a launcher's `SEEDS` array for a smaller run.
+The launchers run seed `10` only. The numbers reported in the paper aggregate all five experimental seeds: `10`, `20`, `30`, `40`, and `50`.
 
 ## Environments
 

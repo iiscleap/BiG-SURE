@@ -10,7 +10,7 @@ FILTER_JSON="${BIGSURE_ROOT}/data/multilingual_sciq/sciq/sciq_rephrased_300.json
 LANGUAGES=(en zh ja fr)
 DATASETS=("sciq")
 MODELS=("apertus" "aya")
-SEEDS=(10 20 30 40 50)
+SEEDS=(10)
 PYTHON_BIN="${PYTHON_BIN:-python}"
 
 : "${GOOGLE_API_KEY:?Set GOOGLE_API_KEY before running Gemini evaluation.}"

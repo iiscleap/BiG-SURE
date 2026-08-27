@@ -146,8 +146,10 @@ This runs:
 - Models: `apertus`, `aya`
 - Dataset: `sciq`
 - Modes: `vanilla`, `sampling`
-- Seeds: `10 20 30 40 50`
+- Seed: `10`
 - Languages: `en zh ja fr`
+
+The launch scripts run seed `10` only. The numbers reported in the paper aggregate all five experimental seeds: `10`, `20`, `30`, `40`, and `50`.
 
 Outputs are written under:
 

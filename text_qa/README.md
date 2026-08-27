@@ -15,7 +15,7 @@ The data is deliberately outside this code folder at `../data/text_qa/`: 400 Tri
 
 ## Workflow
 
-The launchers are location-independent and use seeds `10 20 30 40 50`. Activate `snne`, then run these commands from this folder or invoke the scripts by path from anywhere.
+The launchers are location-independent and run seed `10` only. Activate `snne`, then run these commands from this folder or invoke the scripts by path from anywhere. The numbers reported in the paper aggregate all five experimental seeds: `10`, `20`, `30`, `40`, and `50`.
 
 Generation uses the `bigsure-text-qa` W&B project and stores local run files in `outputs/wandb/`. Run `wandb login` for online tracking or set `WANDB_MODE=offline`. `WANDB_PROJECT` and `WANDB_ENTITY` can override the project and team.
 

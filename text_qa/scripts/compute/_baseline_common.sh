@@ -38,6 +38,7 @@ run_text_baseline() {
 
   while IFS=$'\t' read -r dataset model seed vanilla_run _rephrased_run; do
     [[ -n "${dataset}" && -n "${vanilla_run}" ]] || continue
+    [[ "${seed}" == "10" ]] || continue
     local data_path
     if ! data_path="$(resolve_vanilla_files_dir "${vanilla_run}")"; then
       echo "[skip] ${dataset}/${model}/seed${seed}: no validation_generations.pkl under ${vanilla_run}" >&2

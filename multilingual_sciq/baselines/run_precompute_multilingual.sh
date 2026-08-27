@@ -10,7 +10,7 @@ EXP_BASE="${TASK_ROOT}/outputs"
 ENTAILMENTS_BASE="${TASK_ROOT}/outputs/entailments"
 DATASETS=("sciq")
 MODELS=("apertus" "aya")
-SEEDS=(10 20 30 40 50)
+SEEDS=(10)
 
 K_LOW_T=3
 SUBSAMPLE_HIGH_T=50

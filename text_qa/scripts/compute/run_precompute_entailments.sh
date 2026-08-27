@@ -15,6 +15,7 @@ mkdir -p outputs/entailments
 
 tail -n +2 "${RUNS_FILE}" | while IFS=$'\t' read -r dataset model seed vanilla_run rephrased_run; do
   [[ -n "${dataset}" && -n "${vanilla_run}" && -n "${rephrased_run}" ]] || continue
+  [[ "${seed}" == "10" ]] || continue
   output="outputs/entailments/${dataset}_${model}_seed${seed}_rephrased.npz"
   "${PYTHON_BIN}" snne/precompute_text_qa_entailments.py \
     --vanilla_run_dir "${vanilla_run}" \

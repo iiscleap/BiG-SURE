@@ -15,7 +15,7 @@ WANDB_DIR="${WANDB_DIR:-${TASK_ROOT}/outputs/wandb}"
 DATASETS=("sciq")
 MODELS=("apertus" "aya")
 MODES=("vanilla" "sampling")
-SEEDS=(10 20 30 40 50)
+SEEDS=(10)
 
 for MODEL in "${MODELS[@]}"; do
   for DATASET in "${DATASETS[@]}"; do

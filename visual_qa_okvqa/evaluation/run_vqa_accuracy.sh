@@ -11,7 +11,7 @@ export PYTHONPATH="${ROOT}:${PYTHONPATH:-}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 
 shopt -s nullglob
-PKLS=(outputs/responses/vanilla/*/validation_generations.pkl)
+PKLS=(outputs/responses/vanilla/*_seed10/validation_generations.pkl)
 [[ "${#PKLS[@]}" -gt 0 ]] || {
   echo "No vanilla generations found under outputs/responses/vanilla/. Run inference/run_vanilla_generation.sh first." >&2
   exit 1

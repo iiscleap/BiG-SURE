@@ -15,6 +15,7 @@ mkdir -p outputs/spectral_energy
 
 tail -n +2 "${RUNS_FILE}" | while IFS=$'\t' read -r dataset model seed vanilla_run rephrased_run; do
   [[ -n "${dataset}" && -n "${vanilla_run}" && -n "${rephrased_run}" ]] || continue
+  [[ "${seed}" == "10" ]] || continue
   entailments="outputs/entailments/${dataset}_${model}_seed${seed}_rephrased.npz"
   [[ -f "${entailments}" ]] || { echo "Skipping ${dataset}/${model}/seed${seed}: missing ${entailments}"; continue; }
   "${PYTHON_BIN}" snne/compute_spectral_energy_weighted_all_modes_rephrased.py \

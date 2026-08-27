@@ -8,11 +8,53 @@ BiG-SURE is the consolidated codebase for uncertainty estimation with stochastic
 - Visual QA: OKVQA.
 - Multilingual QA: SciQ in English, Chinese, Japanese, and French.
 
+The provided launch scripts run seed `10` only to keep the default reproduction manageable. The numbers reported in the paper aggregate all five experimental seeds: `10`, `20`, `30`, `40`, and `50`.
+
 This README only covers environment setup and data placement. Use the task README for generation, evaluation, baseline, entailment, and BiG-SURE run instructions:
 
 - [Text QA](text_qa/README.md)
 - [OKVQA Visual QA](visual_qa_okvqa/README.md)
 - [Multilingual SciQ](multilingual_sciq/README.md)
+
+## Score a New Dataset or Model from CSV
+
+`run_uncertainty.py` computes per-example BiG-SURE and baseline uncertainty
+scores from model generations stored in a CSV. A 100-example SciQ/Apertus input
+is provided in `demo_input_100.csv`.
+
+```bash
+conda activate snne
+python run_uncertainty.py \
+  --input demo_input_100.csv \
+  --output demo_scores.csv \
+  --measures all \
+  --device cuda
+```
+
+The required CSV column is `id`. Other columns are JSON arrays and are needed
+according to the selected measure: `sampled_responses`,
+`sampled_probabilities`, `low_temperature_responses`, `rephrased_responses`,
+and `rephrase_ids`. An optional binary `correct` column enables error-AUROC
+evaluation.
+
+Arguments:
+
+- `--input`: input CSV path.
+- `--output`: per-example output CSV path.
+- `--measures`: `all` or a comma-separated selection of `bigsure`,
+  `semantic_entropy`, `predictive_entropy`, `num_semantic_sets`,
+  `lexical_similarity`, `graph_degree`, `graph_eigenvalue`, and `snne`.
+- `--nli-model`: Hugging Face model name or local NLI checkpoint.
+- `--device`: `auto`, `cpu`, or `cuda`.
+- `--batch-size`: NLI batch size; defaults to `128`.
+- `--max-rows`: optionally score only the first N rows for a quick test.
+
+BiG-SURE requires low-temperature answers plus grouped responses generated from
+rephrased or perturbed prompts. The paper configuration uses three
+low-temperature answers and ten stochastic answers for each of five rephrases.
+Larger output values indicate greater uncertainty. When `correct` contains both
+binary classes, the script also writes `<output-name>_summary.csv` with AUROC for
+detecting errors.
 
 ## Environment Setup
 
@@ -124,7 +166,7 @@ No data symlinks or path edits are required. Every maintained launcher derives t
 
 ## Acknowledgements and Code Provenance
 
-This repository is substantially based on and adapted from [SNNE](https://github.com/BigML-CS-UCLA/SNNE), the official implementation of *Beyond Semantic Entropy: Boosting LLM Uncertainty Quantification with Pairwise Semantic Similarity*. We gratefully acknowledge Dang Nguyen, Ali Payani, and Baharan Mirzasoleiman for making that work available. BiG-SURE reuses and extends SNNE's answer-generation pipeline, uncertainty-quantification utilities, semantic-similarity infrastructure, and baseline implementations. This repository adds the task-specific Text QA, multilingual SciQ, and OKVQA workflows; artifact validation and entailment precomputation; and the BiG-SURE spectral-energy method.
+This repository is substantially based on and adapted from [SNNE](https://github.com/BigML-CS-UCLA/SNNE), the official implementation of *Beyond Semantic Entropy: Boosting LLM Uncertainty Quantification with Pairwise Semantic Similarity*. We gratefully acknowledge the authors for making that work available. BiG-SURE reuses and extends SNNE's answer-generation pipeline, uncertainty-quantification utilities, semantic-similarity infrastructure, and baseline implementations. This repository adds the task-specific Text QA, multilingual SciQ, and OKVQA workflows; artifact validation and entailment precomputation; and the BiG-SURE spectral-energy method.
 
 SNNE itself builds on several open-source projects, whose contributions are also part of this codebase's technical lineage:
 

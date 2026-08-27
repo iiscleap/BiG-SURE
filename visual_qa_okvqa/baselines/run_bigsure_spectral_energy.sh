@@ -8,7 +8,7 @@ export PYTHONPATH="${ROOT}:${PYTHONPATH:-}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 
 MODELS=("llava-v1.6-mistral-7b-hf" "Pixtral-12B-2409" "Qwen3-VL-8B-Instruct")
-SEEDS=(10 20 30 40 50)
+SEEDS=(10)
 SUBSAMPLE_HIGH_T=10
 SUBSAMPLE_SEED=123
 

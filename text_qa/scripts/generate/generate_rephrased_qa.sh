@@ -6,7 +6,7 @@ ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 BIGSURE_ROOT="$(cd "${ROOT}/.." && pwd)"
 DATA_ROOT="${BIGSURE_ROOT}/data/text_qa"
 PYTHON_BIN="${PYTHON_BIN:-python}"
-SEEDS=(10 20 30 40 50)
+SEEDS=(10)
 DATASETS=(trivia_qa svamp)
 MODELS=(
   Meta-Llama-3.1-8B-Instruct

@@ -19,7 +19,7 @@ MODELS=(
   "mistralai/Pixtral-12B-2409"
   "Qwen/Qwen3-VL-8B-Instruct"
 )
-SEEDS=(10 20 30 40 50)
+SEEDS=(10)
 
 NUM_GENERATIONS=10
 TEMPERATURE=1.0
