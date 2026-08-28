@@ -51,6 +51,19 @@ NLI_MEASURES = {
     "graph_eigenvalue",
     "snne",
 }
+IMAGE_AUGMENTATIONS = ("contrast", "blur", "rotate", "shift", "noise", "masking", "bw")
+MULTIMODAL_SAMPLES_PER_INPUT = 10
+
+
+def parse_bool(value: str | bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    normalized = value.strip().lower()
+    if normalized in {"true", "1", "yes", "y"}:
+        return True
+    if normalized in {"false", "0", "no", "n"}:
+        return False
+    raise argparse.ArgumentTypeError("expected True or False")
 
 
 def parse_json_list(value: object, column: str, row_id: str) -> list:
@@ -65,6 +78,76 @@ def parse_json_list(value: object, column: str, row_id: str) -> list:
     if not isinstance(parsed, list):
         raise ValueError(f"row {row_id}: {column} must be a JSON array")
     return parsed
+
+
+def parse_image_augmentations(raw: str) -> list[str]:
+    if raw.strip().lower() == "all":
+        return list(IMAGE_AUGMENTATIONS)
+    augmentations = [item.strip().lower() for item in raw.split(",") if item.strip()]
+    unknown = sorted(set(augmentations) - set(IMAGE_AUGMENTATIONS))
+    if unknown:
+        raise ValueError(
+            f"Unknown image augmentations: {', '.join(unknown)}. "
+            f"Choose from {', '.join(IMAGE_AUGMENTATIONS)}"
+        )
+    if not augmentations:
+        raise ValueError("--image_augs must select at least one augmentation")
+    return list(dict.fromkeys(augmentations))
+
+
+def balanced_augmentation_counts(augmentations: list[str], total: int) -> dict[str, int]:
+    base, remainder = divmod(total, len(augmentations))
+    return {
+        augmentation: base + (index < remainder)
+        for index, augmentation in enumerate(augmentations)
+    }
+
+
+def select_multimodal_responses(
+    row: pd.Series,
+    row_id: str,
+    input_aug: bool,
+    image_augmentations: list[str],
+) -> tuple[list[str], list[object]]:
+    response_column = "augmented_responses" if "augmented_responses" in row.index else "rephrased_responses"
+    id_column = "image_augmentation_ids" if "image_augmentation_ids" in row.index else "augmentation_ids"
+    responses = clean_texts(
+        parse_json_list(row.get(response_column), response_column, row_id), response_column, row_id
+    )
+    augmentation_ids = [
+        str(value).strip().lower()
+        for value in parse_json_list(row.get(id_column), id_column, row_id)
+    ]
+    if len(responses) != len(augmentation_ids):
+        raise ValueError(f"row {row_id}: {response_column} and {id_column} must align")
+
+    if input_aug:
+        rephrase_ids = parse_json_list(row.get("rephrase_ids"), "rephrase_ids", row_id)
+        if len(rephrase_ids) != len(responses):
+            raise ValueError(f"row {row_id}: rephrase_ids must align with multimodal responses")
+    else:
+        rephrase_ids = ["direct"] * len(responses)
+
+    quotas = balanced_augmentation_counts(image_augmentations, MULTIMODAL_SAMPLES_PER_INPUT)
+    selected_responses: list[str] = []
+    selected_group_ids: list[object] = []
+    for group_id in dict.fromkeys(rephrase_ids):
+        for augmentation, required in quotas.items():
+            candidates = [
+                response
+                for response, current_group, current_augmentation in zip(
+                    responses, rephrase_ids, augmentation_ids
+                )
+                if current_group == group_id and current_augmentation == augmentation
+            ]
+            if len(candidates) < required:
+                raise ValueError(
+                    f"row {row_id}: group {group_id!r} needs {required} {augmentation} "
+                    f"responses but only {len(candidates)} are available"
+                )
+            selected_responses.extend(candidates[:required])
+            selected_group_ids.extend([group_id] * required)
+    return selected_responses, selected_group_ids
 
 
 def clean_texts(values: Iterable[object], column: str, row_id: str) -> list[str]:
@@ -248,7 +331,14 @@ def parse_measures(raw: str) -> list[str]:
     return list(dict.fromkeys(measures))
 
 
-def score_row(row: pd.Series, measures: list[str], nli: NLIModel | None) -> dict[str, float]:
+def score_row(
+    row: pd.Series,
+    measures: list[str],
+    nli: NLIModel | None,
+    input_aug: bool,
+    multimodal: bool,
+    image_augmentations: list[str],
+) -> dict[str, float]:
     row_id = str(row["id"])
     sampled = clean_texts(parse_json_list(row.get("sampled_responses"), "sampled_responses", row_id), "sampled_responses", row_id)
     probabilities = [float(value) for value in parse_json_list(row.get("sampled_probabilities"), "sampled_probabilities", row_id)]
@@ -271,12 +361,26 @@ def score_row(row: pd.Series, measures: list[str], nli: NLIModel | None) -> dict
     if "bigsure" in measures:
         assert nli is not None
         low = clean_texts(parse_json_list(row.get("low_temperature_responses"), "low_temperature_responses", row_id), "low_temperature_responses", row_id)
-        rephrased = clean_texts(parse_json_list(row.get("rephrased_responses"), "rephrased_responses", row_id), "rephrased_responses", row_id)
-        rephrase_ids = parse_json_list(row.get("rephrase_ids"), "rephrase_ids", row_id)
+        if multimodal:
+            rephrased, rephrase_ids = select_multimodal_responses(
+                row, row_id, input_aug, image_augmentations
+            )
+        elif input_aug:
+            rephrased = clean_texts(parse_json_list(row.get("rephrased_responses"), "rephrased_responses", row_id), "rephrased_responses", row_id)
+            rephrase_ids = parse_json_list(row.get("rephrase_ids"), "rephrase_ids", row_id)
+        else:
+            rephrased = sampled
+            rephrase_ids = ["direct"] * len(rephrased)
         if not low or not rephrased or len(rephrased) != len(rephrase_ids):
-            raise ValueError(f"row {row_id}: BiG-SURE requires aligned low-temperature/rephrased inputs")
-        if len(low) != 3 or len(set(rephrase_ids)) != 5 or len(rephrased) != 50:
-            LOGGER.warning("row %s differs from paper shape (3 low-temperature, 5 x 10 rephrased)", row_id)
+            raise ValueError(f"row {row_id}: BiG-SURE requires aligned low-temperature/augmented inputs")
+        expected_groups = 5 if input_aug else 1
+        expected_responses = expected_groups * MULTIMODAL_SAMPLES_PER_INPUT
+        if len(low) != 3 or len(set(rephrase_ids)) != expected_groups or len(rephrased) != expected_responses:
+            LOGGER.warning(
+                "row %s differs from expected shape (3 low-temperature, %d x 10 augmented)",
+                row_id,
+                expected_groups,
+            )
         scores["bigsure"] = bigsure_uncertainty(low, rephrased, rephrase_ids, nli)
 
     if "predictive_entropy" in measures:
@@ -319,10 +423,23 @@ def main() -> None:
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--max-rows", type=int, default=None, help="Optional smoke-test limit")
+    parser.add_argument(
+        "--input_aug", "--input-aug", type=parse_bool, default=True,
+        help="Use paraphrased input generations for BiG-SURE (default: True)",
+    )
+    parser.add_argument(
+        "--multimodal", type=parse_bool, default=False,
+        help="Read image paths and image-augmentation generation metadata (default: False)",
+    )
+    parser.add_argument(
+        "--image_augs", "--image-augs", "--input_augs", dest="image_augs", default="all",
+        help="Comma-separated image augmentations, or 'all' (used with --multimodal True)",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     measures = parse_measures(args.measures)
+    image_augmentations = parse_image_augmentations(args.image_augs)
     frame = pd.read_csv(args.input)
     if "id" not in frame.columns:
         raise ValueError("Input CSV must contain an id column")
@@ -330,13 +447,30 @@ def main() -> None:
         raise ValueError("Input CSV contains duplicate ids")
     if args.max_rows is not None:
         frame = frame.head(args.max_rows)
+    if args.multimodal:
+        if "image_path" not in frame.columns:
+            raise ValueError("Multimodal CSV input must contain an image_path column")
+        missing_images = []
+        for value in frame["image_path"]:
+            path = Path(str(value)).expanduser()
+            if not path.is_absolute():
+                path = args.input.parent / path
+            if not path.is_file():
+                missing_images.append(str(value))
+        if missing_images:
+            preview = ", ".join(missing_images[:3])
+            raise FileNotFoundError(f"Multimodal CSV references missing images: {preview}")
     nli = NLIModel(args.nli_model, args.device, args.batch_size) if set(measures) & NLI_MEASURES else None
 
     output_rows = []
     for index, row in frame.iterrows():
         LOGGER.info("Scoring row %d/%d (id=%s)", index + 1, len(frame), row["id"])
-        output = {key: row[key] for key in ("id", "question", "correct") if key in frame.columns}
-        output.update(score_row(row, measures, nli))
+        output = {key: row[key] for key in ("id", "question", "image_path", "correct") if key in frame.columns}
+        output.update(
+            score_row(
+                row, measures, nli, args.input_aug, args.multimodal, image_augmentations
+            )
+        )
         output_rows.append(output)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

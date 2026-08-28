@@ -28,14 +28,62 @@ python run_uncertainty.py \
   --input demo_input_100.csv \
   --output demo_scores.csv \
   --measures all \
+  --input_aug True \
   --device cuda
 ```
+
+Set `--input_aug False` to compute BiG-SURE from stochastic generations on the
+direct question instead of the paraphrased-question generations. In that mode,
+`sampled_responses` supplies the ten high-temperature responses and
+`rephrased_responses`/`rephrase_ids` are not required.
 
 The required CSV column is `id`. Other columns are JSON arrays and are needed
 according to the selected measure: `sampled_responses`,
 `sampled_probabilities`, `low_temperature_responses`, `rephrased_responses`,
-and `rephrase_ids`. An optional binary `correct` column enables error-AUROC
-evaluation.
+and `rephrase_ids`. With the default `--input_aug True`, the paper configuration
+stores 50 `rephrased_responses`: ten responses for each of five values in the
+aligned `rephrase_ids` array. An optional binary `correct` column enables
+error-AUROC evaluation.
+
+### Multimodal Input
+
+Place images beside the CSV in an `images/` directory and add an `image_path`
+column containing paths relative to the CSV. For example:
+
+```text
+multimodal_input/
+  input.csv
+  images/
+    example_001.jpg
+    example_002.jpg
+```
+
+```bash
+python run_uncertainty.py \
+  --input multimodal_input/input.csv \
+  --output multimodal_scores.csv \
+  --measures all \
+  --multimodal True \
+  --input_aug True \
+  --image_augs blur,noise \
+  --device cuda
+```
+
+The direct runner scores precomputed model generations; it does not load a VLM
+or create responses from the images. A multimodal CSV must therefore provide
+the responses generated from each augmented image in `augmented_responses`
+(or `rephrased_responses`), with aligned augmentation names in
+`image_augmentation_ids` (or `augmentation_ids`). Allowed names are `contrast`,
+`blur`, `rotate`, `shift`, `noise`, `masking`, and `bw`. When text paraphrasing
+is enabled, `rephrase_ids` must also align with those arrays.
+
+`--image_augs all` is the default. The runner selects exactly ten stochastic
+responses per direct or paraphrased input and balances them over the requested
+image augmentations. Thus `--image_augs blur,noise` selects five responses from
+each augmentation. If ten is not evenly divisible by the number selected, the
+earlier augmentations receive one additional response. The CSV must contain at
+least the required number of precomputed responses for every selected
+augmentation and input group.
 
 Arguments:
 
@@ -48,6 +96,12 @@ Arguments:
 - `--device`: `auto`, `cpu`, or `cuda`.
 - `--batch-size`: NLI batch size; defaults to `128`.
 - `--max-rows`: optionally score only the first N rows for a quick test.
+- `--input_aug`: `True` (default) uses paraphrased input generations; `False`
+  uses direct-question stochastic generations.
+- `--multimodal`: `False` by default; set to `True` for image-backed examples.
+- `--image_augs`: comma-separated image augmentations used in multimodal mode;
+  defaults to `all`. The plural `--input_augs` spelling is accepted as an alias;
+  it is distinct from the singular boolean `--input_aug` option.
 
 BiG-SURE requires low-temperature answers plus grouped responses generated from
 rephrased or perturbed prompts. The paper configuration uses three
