@@ -25,3 +25,5 @@ venv/
 .idea/
 .vscode/
 .DS_Store
+
+text_qa/semantic_entropy_1k

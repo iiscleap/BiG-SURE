@@ -242,3 +242,19 @@ If you use the SNNE-derived components in this repository, please cite the origi
   year={2025}
 }
 ```
+
+## Citation
+
+If you use BiG-SURE in your research, please cite the official paper:
+
+```bibtex
+@misc{bhattacharya2026bigsurebipartitegraph,
+  title         = {BiG-SURE - Bipartite Graph for Semantic Uncertainty and Reliability Estimation of LLMs},
+  author        = {Debarpan Bhattacharya and Malay Phadke and Sriram Ganapathy},
+  year          = {2026},
+  eprint        = {2608.30646},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2608.30646}
+}
+```
